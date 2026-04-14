@@ -1,0 +1,1 @@
+Nhấn [___ F3 ___] trong Blender, gõ [___  Reload Scripts  ___]

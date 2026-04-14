@@ -1,0 +1,205 @@
+import blf
+from . import constants
+
+def draw_hud(op, context):
+    font_id = 0
+    x, y = 90, 350  # Đẩy Y lên cao một chút (350) để có chỗ cho danh sách dài
+    line_height = 25 # Khoảng cách giữa các dòng
+
+    # 1. Định nghĩa bảng màu theo State
+    colors = {
+        constants.STATE_MAIN: (0.2, 0.8, 1.0, 1.0),
+        constants.STATE_TRANSFORM: (1.0, 0.8, 0.0, 1.0),
+        constants.STATE_CREATE: (0.1, 1.0, 0.5, 1.0),
+        constants.STATE_MESH: (1.0, 0.4, 0.7, 1.0),
+        constants.STATE_SPIN_LIST: (0.7, 0.5, 1.0, 1.0),
+        constants.STATE_SPIN_STEPS: (0.7, 0.5, 1.0, 1.0)
+    }
+    
+    # 2. Vẽ Tiêu đề
+    blf.size(font_id, 22)
+    current_color = colors.get(op.state, (1, 1, 1, 1))
+    blf.color(font_id, *current_color)
+    blf.position(font_id, x, y, 0)
+    blf.draw(font_id, f"--- VT SYSTEM: {op.state} ---")
+
+    # 3. Vẽ Nội dung (Màu trắng)
+    blf.color(font_id, 1, 1, 1, 1)
+    
+    if op.state == constants.STATE_MAIN:
+        blf.position(font_id, x, y - 35, 0)
+        blf.draw(font_id, f"{constants.KEY_CREATE}: Create | {constants.KEY_TRANSFORM}: Transform | {constants.KEY_MESH}: Mesh")
+        footer_y = y - 75 # Vị trí dòng Cancel cho menu ngắn
+
+    elif op.state == constants.STATE_TRANSFORM:
+        blf.position(font_id, x, y - 35, 0)
+        blf.draw(font_id, f"{constants.KEY_EXEC_1}: Origin to Bottom | {constants.KEY_EXEC_2}: Drop to Floor")
+        footer_y = y - 75
+
+    elif op.state == constants.STATE_CREATE:
+        blf.position(font_id, x, y - 35, 0)
+        blf.draw(font_id, f"{constants.KEY_EXEC_1}: Cylinder")
+        footer_y = y - 75
+
+    ##### [STATE_MESH]
+    elif op.state == constants.STATE_MESH:
+        blf.position(font_id, x, y - 35, 0)
+        blf.draw(font_id, 
+                 f"{constants.KEY_MENU_INSET}: Inset Menu | {constants.KEY_MENU_PIVOT}: Pivot Menu | {constants.KEY_MENU_MERGE}: Merge Menu | {constants.KEY_MENU_SPIN}: Spin Menu"
+                 )
+        footer_y = y - 75
+
+    ##### [STATE_MESH] => [STATE_INSET_LIST]
+    elif op.state == constants.STATE_INSET_LIST:
+        inset_list = [
+            (constants.LABEL_EXEC_0, constants.INSET_THICKNESS_DEFAULT),
+            (constants.LABEL_EXEC_1, constants.INSET_THICKNESS_001),
+            (constants.LABEL_EXEC_2, constants.INSET_THICKNESS_002),
+            (constants.LABEL_EXEC_3, constants.INSET_THICKNESS_003),
+            (constants.LABEL_EXEC_4, constants.INSET_THICKNESS_004),
+            (constants.LABEL_EXEC_5, constants.INSET_THICKNESS_005),
+            (constants.LABEL_EXEC_6, constants.INSET_THICKNESS_006),
+            (constants.LABEL_EXEC_7, constants.INSET_THICKNESS_007),
+            (constants.LABEL_EXEC_8, constants.INSET_THICKNESS_008),
+            (constants.LABEL_EXEC_9, constants.INSET_THICKNESS_009),
+        ]
+
+        # Vẽ danh sách Inset
+        for i, (label, thickness) in enumerate(inset_list):
+            row_y = (y - 45) - (i * line_height) # Tăng khoảng cách dòng đầu thành 45
+            
+            # 1. Vẽ Nhãn Phím (Màu vàng)
+            blf.position(font_id, x, row_y, 0)
+            blf.color(font_id, 1, 0.8, 0.2, 1)
+            blf.draw(font_id, f"[{label}]")
+            
+            # 2. Vẽ Giá trị (Màu trắng) - Nới rộng X ra 100 đơn vị
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0) # Tăng từ 35 -> 100 để không bị đè
+            blf.draw(font_id, f": Inset {thickness}m")
+        
+        # Đẩy dòng Cancel xuống thấp hơn một chút
+        footer_y = (y - 45) - (len(inset_list) * line_height) - 25
+
+    ##### [STATE_MESH] => [STATE_PIVOT_LIST]
+    elif op.state == constants.STATE_PIVOT_LIST:
+        # Danh sách các lệnh Pivot
+        pivot_commands = [
+            (constants.LABEL_EXEC_1, constants.LABEL_PIVOT_EDGE_CENTER),
+            (constants.LABEL_EXEC_2, constants.NAME_PIVOT_VERTS),
+        ]
+
+        for i, (label, name) in enumerate(pivot_commands):
+            row_y = (y - 45) - (i * line_height)
+            
+            # Vẽ Nhãn [1], [2]
+            blf.position(font_id, x, row_y, 0)
+            blf.color(font_id, 1, 0.8, 0.2, 1)
+            blf.draw(font_id, f"[{label}]")
+            
+            # Vẽ Tên chức năng bằng hằng số
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": {name}")
+            
+        footer_y = (y - 45) - (len(pivot_commands) * line_height) - 25
+
+    ##### [STATE_MESH] => [STATE_MERGE_LIST]
+    elif op.state == constants.STATE_MERGE_LIST:
+        merge_commands = [
+            (constants.LABEL_EXEC_1, constants.LABEL_MERGE_AT_LAST)
+        ]
+
+        for i, (label, name) in enumerate(merge_commands):
+            row_y = (y - 45) - (i * line_height)
+            blf.position(font_id, x, row_y, 0)
+            blf.color(font_id, 1, 0.8, 0.2, 1) # Màu vàng cho phím
+            blf.draw(font_id, f"[{label}]")
+            
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": {name}")
+            
+        footer_y = (y - 45) - (len(merge_commands) * line_height) - 25
+
+    ##### [STATE_SPIN_LIST] - Chọn Trục
+    elif op.state == constants.STATE_SPIN_LIST:
+        spin_axes = [
+            ("1", "Trục X"),
+            ("2", "Trục Y"),
+            ("3", "Trục Z"),
+        ]
+        
+        for i, (label, name) in enumerate(spin_axes):
+            row_y = (y - 45) - (i * line_height)
+            blf.position(font_id, x, row_y, 0)
+            blf.color(font_id, 1, 0.8, 0.2, 1)
+            blf.draw(font_id, f"[{label}]")
+            
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": Spin 90° quanh {name}")
+            
+        footer_y = (y - 45) - (len(spin_axes) * line_height) - 25
+
+    ##### [STATE_SPIN_AXIS]
+    elif op.state == constants.STATE_SPIN_AXIS:
+        axis_display = [
+            ("1", "X (+)"), ("2", "X (-)"),
+            ("3", "Y (+)"), ("4", "Y (-)"),
+            ("5", "Z (+)"), ("6", "Z (-)")
+        ]
+        
+        blf.size(font_id, 20)
+        blf.draw(font_id, "--- CHỌN HƯỚNG SPIN ---")
+        
+        for i, (key, label) in enumerate(axis_display):
+            row_y = (y - 45) - (i * line_height)
+            blf.color(font_id, 1, 0.8, 0.2, 1) # Màu vàng cho phím
+            blf.position(font_id, x, row_y, 0)
+            blf.draw(font_id, f"[{key}]")
+            
+            blf.color(font_id, 1, 1, 1, 1) # Màu trắng cho tên
+            blf.position(font_id, x + 60, row_y, 0)
+            blf.draw(font_id, f": {label}")
+            
+        footer_y = (y - 45) - (len(axis_display) * line_height) - 25
+
+    ##### [STATE_SPIN_STEPS] - Chọn độ mượt
+    elif op.state == constants.STATE_SPIN_STEPS:
+        # Tiêu đề phụ hiển thị trục đang chọn
+        blf.size(font_id, 18)
+        blf.color(font_id, 0.7, 0.5, 1.0, 1)
+        blf.position(font_id, x, y - 45, 0)
+        blf.draw(font_id, f"Axis: {op.selected_axis} | Chọn số phân đoạn (Steps):")
+        
+        # Sử dụng hằng số KEY_EXEC để hiển thị nhãn phím bấm
+        steps_commands = [
+            (constants.KEY_EXEC_2, "2 Steps"),
+            (constants.KEY_EXEC_3, "3 Steps"),
+            (constants.KEY_EXEC_4, "4 Steps"),
+            (constants.KEY_EXEC_5, "5 Steps"),
+            (constants.KEY_EXEC_6, "6 Steps"),
+        ]
+        
+        for i, (key_label, name) in enumerate(steps_commands):
+            row_y = (y - 80) - (i * line_height)
+            
+            # Vẽ Nhãn Phím [2], [3]... lấy từ constants
+            blf.position(font_id, x, row_y, 0)
+            blf.color(font_id, 1, 0.8, 0.2, 1)
+            blf.draw(font_id, f"[{key_label}]")
+            
+            # Vẽ Tên chức năng
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": {name}")
+            
+        footer_y = (y - 80) - (len(steps_commands) * line_height) - 25
+
+
+    # 4. Vẽ Hướng dẫn thoát (Dòng chữ đỏ)
+    blf.size(font_id, 15)
+    blf.color(font_id, 1, 0.3, 0.3, 0.8)
+    blf.position(font_id, x, footer_y, 0)
+    blf.draw(font_id, "[ESC / RMB] to Cancel")
