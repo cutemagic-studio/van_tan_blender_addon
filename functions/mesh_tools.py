@@ -203,3 +203,72 @@ def _execute_spin(context, axis, steps, angle, axis_label):
         return False
 
     return True
+
+import bmesh
+import bpy
+
+def connect_face_centers(context):
+    if context.mode != 'EDIT_MESH':
+        return False
+
+    obj = context.edit_object
+    if not obj or obj.type != 'MESH':
+        return False
+
+    bm = bmesh.from_edit_mesh(obj.data)
+
+    selected_faces = [f for f in bm.faces if f.select]
+    if len(selected_faces) < 2:
+        return False
+
+    # 1. Xác định Active/Other
+    active = bm.select_history.active
+    if not isinstance(active, bmesh.types.BMFace) or active not in selected_faces:
+        active = selected_faces[-1]
+
+    try:
+        other = next(f for f in selected_faces if f != active)
+    except StopIteration:
+        return False
+
+    # 2. Tính toán Center (Chỉ cần World Space khi so sánh hoặc nối xuyên Object)
+    c1 = active.calc_center_median()
+    c2 = other.calc_center_median()
+
+    # Kiểm tra khoảng cách dựa trên World Space để chính xác tuyệt đối về tỉ lệ (Scale)
+    c1_world = obj.matrix_world @ c1
+    c2_world = obj.matrix_world @ c2
+
+    if (c1_world - c2_world).length < 1e-4:
+        return False
+
+    # 3. Tạo Geometry (Dùng tọa độ Local)
+    v1 = bm.verts.new(c1)
+    v2 = bm.verts.new(c2)
+    
+    # Cập nhật Index ngay để tránh lỗi truy xuất
+    bm.verts.index_update()
+    
+    try:
+        new_edge = bm.edges.new((v1, v2))
+    except ValueError: # Đề phòng cạnh đã tồn tại
+        return False
+
+    # 4. Highlight & Cleanup
+    # Nếu mesh nặng, hãy thay 3 vòng for này bằng bpy.ops.mesh.select_all(action='DESELECT')
+    for v in bm.verts: v.select = False
+    for e in bm.edges: e.select = False
+    for f in bm.faces: f.select = False
+
+    v1.select = True
+    v2.select = True
+    new_edge.select = True
+
+    bm.select_history.clear()
+    bm.select_history.add(v2)
+
+    # 5. Đẩy dữ liệu về Mesh
+    bmesh.update_edit_mesh(obj.data)
+    context.area.tag_redraw() # Quan trọng để thấy kết quả ngay
+
+    return True

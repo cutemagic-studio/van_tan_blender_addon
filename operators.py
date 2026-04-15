@@ -52,6 +52,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     # self.state = constants.STATE_SPIN_LIST
                     self.state = constants.STATE_SPIN_AXIS
                     return {'RUNNING_MODAL'}
+                # Nhấn 'C' để vào menu Connect
+                if event.type == 'C':
+                    self.state = constants.STATE_CONNECT_LIST
+                    return {'RUNNING_MODAL'}
                 
                 # Bạn có thể thêm các lệnh mesh khác ở đây (ví dụ: Mirror)
                 if event.type == constants.KEY_EXEC_1:
@@ -204,6 +208,22 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                 
                 context.area.tag_redraw()
                 return {'RUNNING_MODAL'}
+
+            elif self.state == constants.STATE_CONNECT_LIST:
+                # Nhấn '1' để nối trọng tâm mặt
+                if event.type == constants.KEY_EXEC_1:
+                    success = mesh_tools.connect_face_centers(context)
+                    if success:
+                        self.report({'INFO'}, "Faces Connected at Centers")
+                    return self.finish(context)
+
+                # Nút quay lại
+                elif event.type == constants.KEY_BACK:
+                    self.state = constants.STATE_MESH
+
+                context.area.tag_redraw()
+                return {'RUNNING_MODAL'}
+
 
             # Tương tự cho TRANSFORM...
             elif self.state == constants.STATE_TRANSFORM:

@@ -11,6 +11,7 @@ STATE_INSET_LIST = 'INSET_LIST'
 STATE_PIVOT_LIST = 'PIVOT_LIST'
 STATE_MERGE_LIST = 'MERGE_LIST'
 STATE_SPIN_LIST = "SPIN_LIST"
+STATE_CONNECT_LIST = "CONNECT_LIST"
 
 # Quản lý các phím bấm (Keymap Mapping)
 KEY_CREATE = 'C'
@@ -23,6 +24,8 @@ KEY_MENU_INSET = 'I' # Nhấn I trong menu [STATE_MESH] để vào [STATE_INSET_
 KEY_MENU_PIVOT = 'P' # Nhấn P trong menu Mesh để vào danh sách Pivot
 KEY_MENU_MERGE = 'M' # Phím truy cập menu con trong STATE_MESH
 KEY_MENU_SPIN = 'S'
+
+KEY_CONNECT = 'C' # Hoặc phím nào bạn muốn trong menu Mesh
 
 # --- Các mã phím (Dùng trong logic operators.py) ---
 KEY_EXEC_0 = 'ZERO'
@@ -62,6 +65,11 @@ NAME_SPIN_Y = "Spin 90° quanh trục Y (Cursor làm tâm)"
 NAME_SPIN_Z = "Spin 90° quanh trục Z (Cursor làm tâm)"
 STATE_SPIN_AXIS = "SPIN_AXIS"  # Chọn trục X, Y, Z
 STATE_SPIN_STEPS = "SPIN_STEPS" # Chọn số Steps
+
+# Labels
+NAME_CONNECT_FACE_CENTERS = "Connect Face Centers (2 Faces)"
+# Dự phòng cho tương lai
+NAME_CONNECT_EDGE_MIDPOINTS = "Connect Edge Midpoints (Coming Soon)"
 
 # Tham số mặc định cho công cụ
 INSET_THICKNESS_DEFAULT = 0.05
