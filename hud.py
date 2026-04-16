@@ -45,7 +45,12 @@ def draw_hud(op, context):
     elif op.state == constants.STATE_MESH:
         blf.position(font_id, x, y - 35, 0)
         blf.draw(font_id, 
-                 f"{constants.KEY_MENU_INSET}: Inset Menu | {constants.KEY_MENU_PIVOT}: Pivot Menu | {constants.KEY_MENU_MERGE}: Merge Menu | {constants.KEY_MENU_SPIN}: Spin Menu | {constants.KEY_CONNECT}: Connect Menu"
+                f"{constants.KEY_MENU_INSET}: Inset Menu | "
+                f"{constants.KEY_MENU_PIVOT}: Pivot Menu | "
+                f"{constants.KEY_MENU_MERGE}: Merge Menu | "
+                f"{constants.KEY_MENU_SPIN}: Spin Menu | "
+                f"{constants.KEY_CONNECT}: Connect Menu | "
+                f"{constants.KEY_MENU_NEW_MESH}: New Mesh Menu"
                  )
         footer_y = y - 75
 
@@ -224,6 +229,29 @@ def draw_hud(op, context):
             blf.draw(font_id, f": {name}")
             
         footer_y = (y - 80) - (len(connect_commands) * line_height) - 25
+
+    ##### [STATE_MESH] => [STATE_NEW_MESH_LIST]
+    elif op.state == constants.STATE_NEW_MESH_LIST:
+        blf.size(font_id, 20)
+        blf.color(font_id, 0.1, 1.0, 0.5, 1.0) # Màu xanh lá giống STATE_CREATE
+        blf.position(font_id, x, y - 45, 0)
+        blf.draw(font_id, "--- NEW MESH TOOLS ---")
+
+        new_mesh_commands = [
+            (constants.LABEL_EXEC_1, constants.NAME_CREATE_PLANE_AT_VERT),
+        ]
+
+        for i, (label, name) in enumerate(new_mesh_commands):
+            row_y = (y - 80) - (i * line_height)
+            blf.position(font_id, x, row_y, 0)
+            blf.color(font_id, 1, 0.8, 0.2, 1)
+            blf.draw(font_id, f"[{label}]")
+            
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": {name}")
+            
+        footer_y = (y - 80) - (len(new_mesh_commands) * line_height) - 25
 
     # 4. Vẽ Hướng dẫn thoát (Dòng chữ đỏ)
     blf.size(font_id, 15)

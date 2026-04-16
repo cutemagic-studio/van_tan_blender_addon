@@ -1,7 +1,7 @@
 import bpy
 import bmesh
 import math
-from mathutils import Vector
+from mathutils import Vector, Matrix
 
 ##### || ##### || #####
 
@@ -204,9 +204,6 @@ def _execute_spin(context, axis, steps, angle, axis_label):
 
     return True
 
-import bmesh
-import bpy
-
 def connect_face_centers(context):
     if context.mode != 'EDIT_MESH':
         return False
@@ -270,5 +267,75 @@ def connect_face_centers(context):
     # 5. Đẩy dữ liệu về Mesh
     bmesh.update_edit_mesh(obj.data)
     context.area.tag_redraw() # Quan trọng để thấy kết quả ngay
+
+    return True
+
+import bpy
+import bmesh
+import math
+from mathutils import Vector, Matrix
+
+def create_plane_at_vertex(context, size=0.01, offset=0.0005):
+    obj = context.active_object
+    if not obj or obj.type != 'MESH' or obj.mode != 'EDIT':
+        return False
+
+    bm = bmesh.from_edit_mesh(obj.data)
+    bm.normal_update()
+
+    # --- Active vertex ---
+    active_vert = bm.select_history.active
+    if not isinstance(active_vert, bmesh.types.BMVert):
+        selected = [v for v in bm.verts if v.select]
+        if not selected:
+            return False
+        active_vert = selected[-1]
+
+    # Vẫn dùng Normal gốc để đẩy mặt phẳng ra ngoài (tránh z-fighting)
+    normal = active_vert.normal
+    center = active_vert.co + normal * offset
+
+    # --- THAY ĐỔI TẠI ĐÂY: Khóa xoay hoàn toàn theo World ---
+    # Thay vì tính theo horizontal_normal, ta dùng ma trận xoay cố định.
+    # Matrix.Rotation(math.radians(90), 3, 'X') giúp mặt phẳng dựng đứng lên,
+    # mặt phẳng sẽ luôn "nhìn" về hướng trục Y của World (Z rotate = 0).
+    rot_matrix = Matrix.Rotation(math.radians(90), 3, 'X')
+
+    half = size / 2
+    coords = [
+        Vector((-half, -half, 0)),
+        Vector(( half, -half, 0)),
+        Vector(( half,  half, 0)),
+        Vector((-half,  half, 0)),
+    ]
+
+    # Tạo verts mới dựa trên ma trận xoay cố định + vị trí tâm
+    new_verts = [bm.verts.new(rot_matrix @ co + center) for co in coords]
+
+    bm.verts.ensure_lookup_table()
+
+    try:
+        new_face = bm.faces.new(new_verts)
+
+        # Cập nhật Normal cho riêng mặt này để tránh màu đen
+        new_face.normal_update()
+
+        # Deselect nhanh bằng Ops (tiện dùng trong View3D)
+        bpy.ops.mesh.select_all(action='DESELECT')
+
+        # Select mặt mới tạo
+        new_face.select = True
+        for v in new_face.verts:
+            v.select = True
+
+        bm.select_history.clear()
+        bm.select_history.add(new_face)
+
+    except ValueError:
+        return False
+
+    # Cập nhật Normal cho toàn bộ mesh trước khi ghi đè dữ liệu
+    bm.normal_update()
+    bmesh.update_edit_mesh(obj.data)
 
     return True

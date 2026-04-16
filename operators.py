@@ -56,6 +56,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                 if event.type == 'C':
                     self.state = constants.STATE_CONNECT_LIST
                     return {'RUNNING_MODAL'}
+                # Nhấn 'N' để vào menu New Mesh
+                if event.type == constants.KEY_MENU_NEW_MESH:
+                    self.state = constants.STATE_NEW_MESH_LIST
+                    return {'RUNNING_MODAL'}
                 
                 # Bạn có thể thêm các lệnh mesh khác ở đây (ví dụ: Mirror)
                 if event.type == constants.KEY_EXEC_1:
@@ -224,6 +228,21 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                 context.area.tag_redraw()
                 return {'RUNNING_MODAL'}
 
+            ##### [STATE_MESH] => [STATE_NEW_MESH_LIST] 
+            elif self.state == constants.STATE_NEW_MESH_LIST:
+                # Nhấn '1' để tạo Plane 1cm tại Vertex
+                if event.type == constants.KEY_EXEC_1:
+                    success = mesh_tools.create_plane_at_vertex(context, size=0.05)
+                    if success:
+                        self.report({'INFO'}, "Plane 1cm created!")
+                    return self.finish(context)
+
+                # Nút quay lại
+                elif event.type == constants.KEY_BACK:
+                    self.state = constants.STATE_MESH
+
+                context.area.tag_redraw()
+                return {'RUNNING_MODAL'}
 
             # Tương tự cho TRANSFORM...
             elif self.state == constants.STATE_TRANSFORM:
