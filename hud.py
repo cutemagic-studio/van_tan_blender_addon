@@ -51,8 +51,9 @@ def draw_hud(op, context):
                 f"{constants.KEY_MENU_MERGE}: Merge Menu | "
                 f"{constants.KEY_MENU_SPIN}: Spin Menu | "
                 f"{constants.KEY_CONNECT}: Connect Menu | "
-                f"{constants.KEY_MENU_NEW_MESH}: New Mesh Menu"
-                f"{constants.KEY_MENU_EXPORT}: Export Menu"
+                f"{constants.KEY_MENU_NEW_MESH}: New Mesh Menu |"
+                f"{constants.KEY_MENU_EXPORT}: Export Menu |"
+                f"{constants.KEY_MENU_REPLACE}: Replace Menu |"
                  )
         footer_y = y - 75
 
@@ -265,6 +266,28 @@ def draw_hud(op, context):
 
         export_commands = [
             (constants.LABEL_EXEC_1, constants.NAME_EXPORT_POSITIONS_UNITY),
+        ]
+
+        for i, (label, name) in enumerate(export_commands):
+            row_y = (y - 80) - (i * line_height)
+            blf.color(font_id, 1, 0.8, 0.2, 1)
+            blf.position(font_id, x, row_y, 0)
+            blf.draw(font_id, f"[{label}]")
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": {name}")
+            
+        footer_y = (y - 80) - (len(export_commands) * line_height) - 25
+
+    ##### [STATE_REPLACE_LIST]
+    elif op.state == constants.STATE_REPLACE_LIST:
+        blf.size(font_id, 20)
+        blf.color(font_id, 0.4, 0.7, 1.0, 1.0) # Màu xanh dương cho Export
+        blf.position(font_id, x, y - 45, 0)
+        blf.draw(font_id, "--- REPLACE TOOLS ---")
+
+        export_commands = [
+            (constants.LABEL_EXEC_1, constants.NAME_REPLACE_NAME_OBJECT),
         ]
 
         for i, (label, name) in enumerate(export_commands):

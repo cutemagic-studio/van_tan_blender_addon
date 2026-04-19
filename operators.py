@@ -66,6 +66,11 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     self.state = constants.STATE_EXPORT_LIST
                     return {'RUNNING_MODAL'}
                 
+                # Nhấn 'R' để vào menu Export
+                if event.type == constants.KEY_MENU_REPLACE:
+                    self.state = constants.STATE_REPLACE_LIST
+                    return {'RUNNING_MODAL'}
+                
                 # Bạn có thể thêm các lệnh mesh khác ở đây (ví dụ: Mirror)
                 if event.type == constants.KEY_EXEC_1:
                     bpy.ops.object.modifier_add(type='MIRROR')
@@ -262,6 +267,21 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                 elif event.type == constants.KEY_BACK:
                     self.state = constants.STATE_MESH
+
+            ##### Trong STATE_REPLACE_LIST
+            elif self.state == constants.STATE_REPLACE_LIST:
+                if event.type == constants.KEY_EXEC_1:
+                    
+                    success = mesh_tools.rename_with_smart_suffix(context)
+                    if success:
+                        self.report({'INFO'}, f"Đổi tên thành công")
+                    else:
+                        self.report({'WARNING'}, "Đổi tên không thành công")
+                    return self.finish(context)
+
+                elif event.type == constants.KEY_BACK:
+                    self.state = constants.STATE_MESH
+
 
             # Tương tự cho TRANSFORM...
             elif self.state == constants.STATE_TRANSFORM:
