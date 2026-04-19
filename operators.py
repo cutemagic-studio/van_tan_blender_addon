@@ -33,7 +33,7 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     self.state = constants.STATE_MESH
             
             # THỰC THI (Ví dụ nhánh Mesh)
-            ##### [STATE_MESH]
+            ##### [STATE_MESH] 
             elif self.state == constants.STATE_MESH:
                 # Nếu nhấn I, chuyển sang trạng thái hiện danh sách Inset
                 if event.type == constants.KEY_MENU_INSET:
@@ -59,6 +59,11 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                 # Nhấn 'N' để vào menu New Mesh
                 if event.type == constants.KEY_MENU_NEW_MESH:
                     self.state = constants.STATE_NEW_MESH_LIST
+                    return {'RUNNING_MODAL'}
+                
+                # Nhấn 'E' để vào menu Export
+                if event.type == constants.KEY_MENU_EXPORT:
+                    self.state = constants.STATE_EXPORT_LIST
                     return {'RUNNING_MODAL'}
                 
                 # Bạn có thể thêm các lệnh mesh khác ở đây (ví dụ: Mirror)
@@ -243,12 +248,36 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                 context.area.tag_redraw()
                 return {'RUNNING_MODAL'}
+            
+            ##### Trong STATE_EXPORT_LIST
+            elif self.state == constants.STATE_EXPORT_LIST:
+                if event.type == constants.KEY_EXEC_1:
+                    from .functions import export_tools
+                    success, count = export_tools.export_positions_to_json(context)
+                    if success:
+                        self.report({'INFO'}, f"Exported {count} objects to Unity JSON")
+                    else:
+                        self.report({'WARNING'}, "Export failed! Check console or selection.")
+                    return self.finish(context)
+
+                elif event.type == constants.KEY_BACK:
+                    self.state = constants.STATE_MESH
 
             # Tương tự cho TRANSFORM...
             elif self.state == constants.STATE_TRANSFORM:
                 if event.type == constants.KEY_EXEC_1:
-                    transform_tools.origin_to_bottom()
+                    success = transform_tools.export_each_object_to_fbx(context)
+                    if success:
+                        self.report({'INFO'}, "Exported FBX files successfully!")
+
                     return self.finish(context)
+
+                # if event.type == constants.KEY_EXEC_1:
+                #     transform_tools.origin_to_bottom_selected()
+                #     return self.finish(context)
+                # elif event.type == constants.KEY_EXEC_2:
+                #     transform_tools.drop_to_floor_selected()
+                #     return self.finish(context)
 
         return {'RUNNING_MODAL'}
     

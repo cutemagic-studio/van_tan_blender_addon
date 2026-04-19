@@ -13,11 +13,13 @@ STATE_MERGE_LIST = 'MERGE_LIST'
 STATE_SPIN_LIST = "SPIN_LIST"
 STATE_CONNECT_LIST = "CONNECT_LIST"
 STATE_NEW_MESH_LIST = 'NEW_MESH_LIST'
+STATE_EXPORT_LIST = 'EXPORT_LIST'
 
 # Quản lý các phím bấm (Keymap Mapping)
 KEY_CREATE = 'C'
 KEY_TRANSFORM = 'T'
 KEY_MESH = 'M'
+KEY_MENU_EXPORT = 'E'
 
 # --- PHÍM TRUY CẬP MENU CON ---
 ##### [STATE_MESH]
@@ -76,6 +78,7 @@ NAME_CONNECT_EDGE_MIDPOINTS = "Connect Edge Midpoints (Coming Soon)"
 # Thêm vào phần Labels
 NAME_CREATE_PLANE_AT_VERT = "Tạo Plane 1cm tại Vertex (Tâm)"
 
+NAME_EXPORT_POSITIONS_UNITY = "Export Object Positions (Unity JSON)"
 
 # Tham số mặc định cho công cụ
 INSET_THICKNESS_DEFAULT = 0.05

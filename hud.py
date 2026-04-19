@@ -6,7 +6,7 @@ def draw_hud(op, context):
     x, y = 90, 350  # Đẩy Y lên cao một chút (350) để có chỗ cho danh sách dài
     line_height = 25 # Khoảng cách giữa các dòng
 
-    # 1. Định nghĩa bảng màu theo State
+    # 1. Định nghĩa bảng màu theo State 
     colors = {
         constants.STATE_MAIN: (0.2, 0.8, 1.0, 1.0),
         constants.STATE_TRANSFORM: (1.0, 0.8, 0.0, 1.0),
@@ -33,7 +33,8 @@ def draw_hud(op, context):
 
     elif op.state == constants.STATE_TRANSFORM:
         blf.position(font_id, x, y - 35, 0)
-        blf.draw(font_id, f"{constants.KEY_EXEC_1}: Origin to Bottom | {constants.KEY_EXEC_2}: Drop to Floor")
+        # blf.draw(font_id, f"{constants.LABEL_EXEC_1}: Origin to Bottom | {constants.KEY_EXEC_2}: Drop to Floor")
+        blf.draw(font_id, f"{constants.LABEL_EXEC_1}: Xuất tất cả Fbx")
         footer_y = y - 75
 
     elif op.state == constants.STATE_CREATE:
@@ -51,6 +52,7 @@ def draw_hud(op, context):
                 f"{constants.KEY_MENU_SPIN}: Spin Menu | "
                 f"{constants.KEY_CONNECT}: Connect Menu | "
                 f"{constants.KEY_MENU_NEW_MESH}: New Mesh Menu"
+                f"{constants.KEY_MENU_EXPORT}: Export Menu"
                  )
         footer_y = y - 75
 
@@ -252,6 +254,29 @@ def draw_hud(op, context):
             blf.draw(font_id, f": {name}")
             
         footer_y = (y - 80) - (len(new_mesh_commands) * line_height) - 25
+
+
+    ##### [STATE_EXPORT_LIST]
+    elif op.state == constants.STATE_EXPORT_LIST:
+        blf.size(font_id, 20)
+        blf.color(font_id, 0.4, 0.7, 1.0, 1.0) # Màu xanh dương cho Export
+        blf.position(font_id, x, y - 45, 0)
+        blf.draw(font_id, "--- EXPORT TOOLS ---")
+
+        export_commands = [
+            (constants.LABEL_EXEC_1, constants.NAME_EXPORT_POSITIONS_UNITY),
+        ]
+
+        for i, (label, name) in enumerate(export_commands):
+            row_y = (y - 80) - (i * line_height)
+            blf.color(font_id, 1, 0.8, 0.2, 1)
+            blf.position(font_id, x, row_y, 0)
+            blf.draw(font_id, f"[{label}]")
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": {name}")
+            
+        footer_y = (y - 80) - (len(export_commands) * line_height) - 25
 
     # 4. Vẽ Hướng dẫn thoát (Dòng chữ đỏ)
     blf.size(font_id, 15)
