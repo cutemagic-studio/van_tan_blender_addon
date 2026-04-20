@@ -340,6 +340,44 @@ def create_plane_at_vertex(context, size=0.01, offset=0.0005):
 
     return True
 
+# def rename_with_smart_suffix(context):
+#     active_obj = context.active_object
+#     selected_objs = context.selected_objects
+    
+#     if not active_obj or not selected_objs:
+#         return False
+
+#     # 1. Làm sạch tên gốc của Active Object (Xóa đuôi .001 nếu có)
+#     # Ví dụ: "TallTable.001" -> "TallTable", "TallTable_01.001" -> "TallTable_01"
+#     base_name = active_obj.name.rsplit('.', 1)[0]
+    
+#     # Danh sách 26 chữ cái cho trường hợp 2
+#     alphabet = "abcdefghijklmnopqrstuvwxyz"
+
+#     # Sắp xếp danh sách chọn (để object active luôn là cái đầu tiên hoặc theo thứ tự bạn muốn)
+#     # Ở đây ta giữ nguyên thứ tự chọn của người dùng hoặc sắp xếp theo tên cũ
+#     objs_to_rename = [o for o in selected_objs]
+
+#     # TRƯỜNG HỢP 2: Nếu tên gốc đã có "_" (Ví dụ: TallTable_01)
+#     if "_" in base_name:
+#         print(f"Detected Case 2: Suffix a, b, c... for {base_name}")
+#         for i, obj in enumerate(objs_to_rename):
+#             if i < len(alphabet):
+#                 char_suffix = alphabet[i]
+#                 obj.name = f"{base_name}{char_suffix}"
+#             else:
+#                 # Nếu quá 26 object, quay lại a1, b1... hoặc giữ nguyên
+#                 obj.name = f"{base_name}{alphabet[i % 26]}{i // 26}"
+
+#     # TRƯỜNG HỢP 1: Tên thuần Text (Ví dụ: TallTable)
+#     else:
+#         print(f"Detected Case 1: Suffix _01, _02... for {base_name}")
+#         for i, obj in enumerate(objs_to_rename):
+#             # i + 1 để bắt đầu từ _01 thay vì _00
+#             obj.name = f"{base_name}_{i+1:02d}"
+
+#     return True
+
 def rename_with_smart_suffix(context):
     active_obj = context.active_object
     selected_objs = context.selected_objects
@@ -347,33 +385,37 @@ def rename_with_smart_suffix(context):
     if not active_obj or not selected_objs:
         return False
 
-    # 1. Làm sạch tên gốc của Active Object (Xóa đuôi .001 nếu có)
-    # Ví dụ: "TallTable.001" -> "TallTable", "TallTable_01.001" -> "TallTable_01"
-    base_name = active_obj.name.rsplit('.', 1)[0]
+    # 1. Làm sạch tên: Xóa đuôi .001 VÀ xóa toàn bộ khoảng trắng
+    # Ví dụ: "Tall Table .001" -> "TallTable"
+    raw_name = active_obj.name.rsplit('.', 1)[0]
+    base_name = raw_name.replace(" ", "")
     
-    # Danh sách 26 chữ cái cho trường hợp 2
     alphabet = "abcdefghijklmnopqrstuvwxyz"
 
-    # Sắp xếp danh sách chọn (để object active luôn là cái đầu tiên hoặc theo thứ tự bạn muốn)
-    # Ở đây ta giữ nguyên thứ tự chọn của người dùng hoặc sắp xếp theo tên cũ
-    objs_to_rename = [o for o in selected_objs]
+    # Sắp xếp để đảm bảo thứ tự đổi tên logic (ví dụ theo vị trí X)
+    objs_to_rename = sorted(selected_objs, key=lambda o: o.location.x)
 
     # TRƯỜNG HỢP 2: Nếu tên gốc đã có "_" (Ví dụ: TallTable_01)
     if "_" in base_name:
-        print(f"Detected Case 2: Suffix a, b, c... for {base_name}")
+        print(f"Case 2: Suffix a,b,c... for {base_name}")
         for i, obj in enumerate(objs_to_rename):
             if i < len(alphabet):
                 char_suffix = alphabet[i]
                 obj.name = f"{base_name}{char_suffix}"
             else:
-                # Nếu quá 26 object, quay lại a1, b1... hoặc giữ nguyên
+                # Nếu vượt quá 26 chữ cái (a1, a2...)
                 obj.name = f"{base_name}{alphabet[i % 26]}{i // 26}"
 
     # TRƯỜNG HỢP 1: Tên thuần Text (Ví dụ: TallTable)
     else:
-        print(f"Detected Case 1: Suffix _01, _02... for {base_name}")
+        print(f"Case 1: Suffix _01, _02... for {base_name}")
         for i, obj in enumerate(objs_to_rename):
-            # i + 1 để bắt đầu từ _01 thay vì _00
             obj.name = f"{base_name}_{i+1:02d}"
 
+    # Đổi tên Mesh Data bên trong luôn cho sạch sẽ
+    for obj in objs_to_rename:
+        if obj.type == 'MESH':
+            obj.data.name = f"Data_{obj.name}"
+
+    print(f"✅ Rename hoàn tất (Không khoảng trắng): {base_name}")
     return True
