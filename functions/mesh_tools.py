@@ -419,3 +419,28 @@ def rename_with_smart_suffix(context):
 
     print(f"✅ Rename hoàn tất (Không khoảng trắng): {base_name}")
     return True
+
+def clean_spaces_in_names(context):
+    selected_objs = context.selected_objects
+    
+    if not selected_objs:
+        print("Không có object nào được chọn.")
+        return False
+
+    for obj in selected_objs:
+        # 1. Loại bỏ khoảng trắng trong tên Object
+        # Sử dụng replace(" ", "") để xóa toàn bộ khoảng trắng
+        new_name = obj.name.replace(" ", "")
+        
+        # Chỉ cập nhật nếu tên thực sự có thay đổi
+        if obj.name != new_name:
+            obj.name = new_name
+            
+        # 2. Đồng bộ luôn cho Mesh Data (Tùy chọn nhưng nên làm)
+        if obj.type == 'MESH':
+            # Xóa khoảng trắng và đảm bảo tên Data khớp với tên Object
+            new_data_name = f"Data_{obj.name}"
+            obj.data.name = new_data_name
+
+    print(f"✅ Đã xóa khoảng trắng cho {len(selected_objs)} objects.")
+    return True

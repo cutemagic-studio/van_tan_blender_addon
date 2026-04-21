@@ -268,7 +268,7 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                 elif event.type == constants.KEY_BACK:
                     self.state = constants.STATE_MESH
 
-            ##### Trong STATE_REPLACE_LIST
+            ##### Trong STATE_REPLACE_LIST 
             elif self.state == constants.STATE_REPLACE_LIST:
                 if event.type == constants.KEY_EXEC_1:
                     
@@ -277,6 +277,15 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                         self.report({'INFO'}, f"Đổi tên thành công")
                     else:
                         self.report({'WARNING'}, "Đổi tên không thành công")
+                    return self.finish(context)
+            
+                elif event.type == constants.KEY_EXEC_2:
+                    
+                    success = mesh_tools.clean_spaces_in_names(context)
+                    if success:
+                        self.report({'INFO'}, f"Đổi tên thành công (Xóa khoảng trắng)")
+                    else:
+                        self.report({'WARNING'}, "Đổi tên không thành công (Xóa khoảng trắng)")
                     return self.finish(context)
 
                 elif event.type == constants.KEY_BACK:

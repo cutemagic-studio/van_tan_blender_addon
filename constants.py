@@ -83,6 +83,7 @@ NAME_CREATE_PLANE_AT_VERT = "Tạo Plane 1cm tại Vertex (Tâm)"
 NAME_EXPORT_POSITIONS_UNITY = "Export Object Positions (Unity JSON)"
 
 NAME_REPLACE_NAME_OBJECT = "Đổi tên obj - tham chiếu obj sau cùng"
+NAME_REPLACE_NAME_OBJECT_REMOVE_SPACE = "Đổi tên obj - xóa khoảng trắng"
 
 # Tham số mặc định cho công cụ
 INSET_THICKNESS_DEFAULT = 0.05

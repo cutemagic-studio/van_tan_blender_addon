@@ -171,8 +171,8 @@ def prepare_selected_for_unity():
     drop_to_floor_selected() 
 
 
-# def export_each_object_to_fbx(context, export_folder="X:/UNITY_STORE/export/"):
-def export_each_object_to_fbx(context, export_folder="G:/Blender_Export_Data_Json/"):
+def export_each_object_to_fbx(context, export_folder="X:/UNITY_STORE/ALL_PACK/EXPORT_FBX_ALL"):
+# def export_each_object_to_fbx(context, export_folder="G:/Blender_Export_Data_Json/"):
     # Đảm bảo thư mục tồn tại
     if not os.path.exists(export_folder):
         os.makedirs(export_folder)

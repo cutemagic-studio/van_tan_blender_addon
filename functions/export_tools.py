@@ -4,7 +4,9 @@ import os
 
 def export_positions_to_json(context):
     # Đường dẫn xuất file (Bạn có thể tùy biến hoặc dùng biến môi trường sau này)
-    output_path = "E:/Unity_Projects/My_First_Game/Assets/TestImportAssetFromBlender/Scripts/JSON_Data/positions.json"
+    # output_path = "E:/Unity_Projects/My_First_Game/Assets/TestImportAssetFromBlender/Scripts/JSON_Data/positions.json"
+    
+    output_path = "X:/UNITY_STORE/ALL_PACK/PACK_03_room/blender/FILE_blender_xuat_FBX/position_data/positions.json"
     
     # Đảm bảo thư mục tồn tại
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

@@ -288,6 +288,7 @@ def draw_hud(op, context):
 
         export_commands = [
             (constants.LABEL_EXEC_1, constants.NAME_REPLACE_NAME_OBJECT),
+            (constants.LABEL_EXEC_2, constants.NAME_REPLACE_NAME_OBJECT_REMOVE_SPACE),
         ]
 
         for i, (label, name) in enumerate(export_commands):
