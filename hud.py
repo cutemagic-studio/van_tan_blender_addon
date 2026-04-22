@@ -28,19 +28,68 @@ def draw_hud(op, context):
     
     if op.state == constants.STATE_MAIN:
         blf.position(font_id, x, y - 35, 0)
-        blf.draw(font_id, f"{constants.KEY_CREATE}: Create | {constants.KEY_TRANSFORM}: Transform | {constants.KEY_MESH}: Mesh")
+        blf.draw(font_id, f"{constants.KEY_OBJECT}: Object | {constants.KEY_TRANSFORM}: Transform | {constants.KEY_MESH}: Mesh")
         footer_y = y - 75 # Vị trí dòng Cancel cho menu ngắn
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+    elif op.state == constants.STATE_OBJECT:
+        blf.position(font_id, x, y - 35, 0)
+        # blf.draw(font_id, 
+        #          f"{constants.LABEL_EXEC_1}: {constants.LABEL_OBJECT_MAKE_ROOT_OBJECT} | "
+        #          f"{constants.LABEL_EXEC_2}: {constants.LABEL_OBJECT_MAKE_REFERENCE_OBJECT} | "
+        #          f"{constants.LABEL_EXEC_3}: {constants.LABEL_OBJECT_SYNC_REFERENCE_OBJECT} | "
+        #          )
+        # footer_y = y - 75
+
+        object_commands = [
+            (constants.LABEL_EXEC_1, constants.LABEL_OBJECT_MAKE_ROOT_OBJECT),
+            (constants.LABEL_EXEC_2, constants.LABEL_OBJECT_MAKE_ROOT_OBJECT_FORCE),
+            (constants.LABEL_EXEC_3, constants.LABEL_OBJECT_MAKE_ROOT_OBJECT_FROM_REFERENCE),
+            (constants.LABEL_EXEC_4, constants.LABEL_OBJECT_MAKE_REFERENCE_OBJECT),
+            (constants.LABEL_EXEC_5, constants.LABEL_OBJECT_SYNC_REFERENCE_OBJECT),
+            (constants.LABEL_EXEC_6, constants.LABEL_OBJECT_SYNC_OBJECT_POSITION_DATA),
+        ]
+
+        for i, (label, name) in enumerate(object_commands):
+            row_y = (y - 45) - (i * line_height)
+            blf.position(font_id, x, row_y, 0)
+            blf.color(font_id, 1, 0.8, 0.2, 1) # Màu vàng cho phím
+            blf.draw(font_id, f"[{label}]")
+            
+            blf.color(font_id, 1, 1, 1, 1)
+            blf.position(font_id, x + 100, row_y, 0)
+            blf.draw(font_id, f": {name}")
+            
+        footer_y = (y - 45) - (len(object_commands) * line_height) - 25
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
     elif op.state == constants.STATE_TRANSFORM:
         blf.position(font_id, x, y - 35, 0)
         # blf.draw(font_id, f"{constants.LABEL_EXEC_1}: Origin to Bottom | {constants.KEY_EXEC_2}: Drop to Floor")
-        blf.draw(font_id, f"{constants.LABEL_EXEC_1}: Xuất tất cả Fbx")
+        blf.draw(font_id, 
+                 f"{constants.LABEL_EXEC_1}: Xuất tất cả Fbx"
+                 f"{constants.LABEL_EXEC_2}: Di chuyển Obj xuống mặt đất"
+                 )
         footer_y = y - 75
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
     elif op.state == constants.STATE_CREATE:
         blf.position(font_id, x, y - 35, 0)
         blf.draw(font_id, f"{constants.KEY_EXEC_1}: Cylinder")
         footer_y = y - 75
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
     ##### [STATE_MESH]
     elif op.state == constants.STATE_MESH:
@@ -256,6 +305,9 @@ def draw_hud(op, context):
             
         footer_y = (y - 80) - (len(new_mesh_commands) * line_height) - 25
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
     ##### [STATE_EXPORT_LIST]
     elif op.state == constants.STATE_EXPORT_LIST:
@@ -279,6 +331,10 @@ def draw_hud(op, context):
             
         footer_y = (y - 80) - (len(export_commands) * line_height) - 25
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
     ##### [STATE_REPLACE_LIST]
     elif op.state == constants.STATE_REPLACE_LIST:
         blf.size(font_id, 20)
@@ -301,6 +357,10 @@ def draw_hud(op, context):
             blf.draw(font_id, f": {name}")
             
         footer_y = (y - 80) - (len(export_commands) * line_height) - 25
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
     # 4. Vẽ Hướng dẫn thoát (Dòng chữ đỏ)
     blf.size(font_id, 15)

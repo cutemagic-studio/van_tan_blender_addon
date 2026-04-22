@@ -2,8 +2,8 @@ import bpy
 from . import hud
 from .functions import transform_tools
 from .functions import mesh_tools
+from .functions import object_tools
 
-import bpy
 from . import hud, constants  # Import constants
 from .functions import transform_tools, mesh_tools
 
@@ -23,15 +23,86 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
             if event.type in {'ESC', 'RIGHTMOUSE'}:
                 return self.finish(context, True)
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
             # ĐIỀU HƯỚNG
             if self.state == constants.STATE_MAIN:
-                if event.type == constants.KEY_CREATE: 
-                    self.state = constants.STATE_CREATE
+                # if event.type == constants.KEY_CREATE: 
+                #     self.state = constants.STATE_CREATE
+                if event.type == constants.KEY_OBJECT: 
+                    self.state = constants.STATE_OBJECT
                 elif event.type == constants.KEY_TRANSFORM: 
                     self.state = constants.STATE_TRANSFORM
                 elif event.type == constants.KEY_MESH: 
                     self.state = constants.STATE_MESH
             
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+            # THỰC THI
+            ##### [STATE_OBJECT] 
+            elif self.state == constants.STATE_OBJECT:
+                if event.type == constants.KEY_EXEC_1:
+                    success = object_tools.make_root(context)
+                    if success:
+                        self.report({'INFO'}, "Make root successfully!")
+                    else:
+                        self.report({'WARNING'}, "Xảy ra lỗi!")
+
+                    return self.finish(context)
+                
+                if event.type == constants.KEY_EXEC_2:
+                    success = object_tools.make_root(context, force = True)
+                    if success:
+                        self.report({'INFO'}, "Make root (Force) successfully!")
+                    else:
+                        self.report({'WARNING'}, "Xảy ra lỗi!")
+
+                    return self.finish(context)
+                
+                if event.type == constants.KEY_EXEC_3:
+                    success = object_tools.make_root_from_reference(context)
+                    if success:
+                        self.report({'INFO'}, "Make root from reference successfully!")
+                    else:
+                        self.report({'WARNING'}, "Xảy ra lỗi!")
+
+                    return self.finish(context)
+
+                if event.type == constants.KEY_EXEC_4:
+                    success = object_tools.make_reference(context)
+                    if success:
+                        self.report({'INFO'}, "Make reference successfully!")
+                    else:
+                        self.report({'WARNING'}, "Xảy ra lỗi!")
+
+                    return self.finish(context)
+                
+                if event.type == constants.KEY_EXEC_5:
+                    success = object_tools.sync_reference_instances(context)
+                    if success:
+                        self.report({'INFO'}, "Đồng bộ hóa danh sách Obj tham chiếu thành công!")
+                    else:
+                        self.report({'WARNING'}, "Đồng bộ hóa danh sách Obj tham chiếu xảy ra lỗi!")
+
+                    return self.finish(context)
+                
+                if event.type == constants.KEY_EXEC_6:
+                    success = object_tools.sync_position_data(context)
+                    if success:
+                        self.report({'INFO'}, "Đồng bộ hóa dữ liệu vị trí (Collection & Transform) thành công!")
+                    else:
+                        self.report({'WARNING'}, "Đồng bộ hóa dữ liệu vị trí (Collection & Transform) xảy ra lỗi!")
+
+                    return self.finish(context)
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
             # THỰC THI (Ví dụ nhánh Mesh)
             ##### [STATE_MESH] 
             elif self.state == constants.STATE_MESH:
@@ -76,6 +147,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     bpy.ops.object.modifier_add(type='MIRROR')
                     return self.finish(context)
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
             ##### [STATE_MESH] => [STATE_INSET_LIST]
             elif self.state == constants.STATE_INSET_LIST:
                 # Mapping phím bấm với giá trị độ dày tương ứng
@@ -104,6 +179,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
                 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
             ##### [STATE_MESH] => [STATE_PIVOT_LIST]    
             elif self.state == constants.STATE_PIVOT_LIST:
                 # Thực thi chức năng trong menu Pivot
@@ -135,6 +214,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
                 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
             ##### [STATE_MESH] => [STATE_MERGE_LIST]
             elif self.state == constants.STATE_MERGE_LIST:
                 if event.type == constants.KEY_EXEC_1:
@@ -150,6 +233,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
                     
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
             elif self.state == constants.STATE_SPIN_LIST:
                 # Nhấn phím 1: Spin X
@@ -254,6 +340,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                 context.area.tag_redraw()
                 return {'RUNNING_MODAL'}
             
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
             ##### Trong STATE_EXPORT_LIST
             elif self.state == constants.STATE_EXPORT_LIST:
                 if event.type == constants.KEY_EXEC_1:
@@ -267,6 +357,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                 elif event.type == constants.KEY_BACK:
                     self.state = constants.STATE_MESH
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
             ##### Trong STATE_REPLACE_LIST 
             elif self.state == constants.STATE_REPLACE_LIST:
@@ -291,6 +385,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                 elif event.type == constants.KEY_BACK:
                     self.state = constants.STATE_MESH
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
             # Tương tự cho TRANSFORM...
             elif self.state == constants.STATE_TRANSFORM:
@@ -298,6 +395,12 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     success = transform_tools.export_each_object_to_fbx(context)
                     if success:
                         self.report({'INFO'}, "Exported FBX files successfully!")
+
+                    return self.finish(context)
+                if event.type == constants.KEY_EXEC_2:
+                    success = transform_tools.prepare_selected_for_unity()
+                    if success:
+                        self.report({'INFO'}, "Di chuyển Obj xuống mặt đất thành công!")
 
                     return self.finish(context)
 
@@ -310,6 +413,10 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
         return {'RUNNING_MODAL'}
     
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
     # ... các hàm invoke/finish giữ nguyên
 
     def invoke(self, context, event):
