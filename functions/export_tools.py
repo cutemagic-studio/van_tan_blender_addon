@@ -24,17 +24,24 @@ def export_positions_to_json(context):
             # Lấy tên gốc (loại bỏ .001, .002...)
             "name": obj.name.rsplit('.', 1)[0],
             # Chuyển đổi hệ trục: Blender (Z-up) -> Unity (Y-up)
-            "pos": {
-                "x": pos.x,
-                "y": pos.z,  # Z lên trên
-                "z": pos.y   # Y thành chiều sâu
-            }
+            # "pos": {
+            #     "x": pos.x,
+            #     "y": pos.z,  # Z lên trên
+            #     "z": pos.y   # Y thành chiều sâu
+            # }
 
             # "pos": {
             #     "x": pos.x,
             #     "y": pos.y,
             #     "z": pos.z
             # }
+
+            # Cập nhật lại hướng chính xác
+            "pos": {
+                "x": pos.x * (-1),
+                "y": pos.z,
+                "z": pos.y * (-1)
+            }
         })
 
     try:
