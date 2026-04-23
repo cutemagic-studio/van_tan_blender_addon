@@ -1,5 +1,7 @@
 import bpy
 import time
+import json
+import os
 from .. import utils
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
@@ -94,14 +96,29 @@ def make_root(context, force = False):
         root_ui = obj.id_properties_ui("CMC_IsRootObject")
         root_ui.update(description="Mark this object as a Root reference")
 
-        # Chuẩn bị nội dung thông báo 
+        # ----------
+        # ----------
+        # THÔNG BÁO - Start
+
+        # Chuẩn bị nội dung thông báo
         msg = [
-            "Quá trình đồng bộ hoàn tất:",
-            "- Đã xử lý: 1000 objects",
-            "- Trạng thái: ✅ Thành công",
+            "Tạo Bản Gốc Thành Công",
+            f"Id: {obj['CMC_Id']}",
         ]
         # Gọi hàm hiển thị Popup nổi bật
-        utils.show_detailed_message(msg, title="CMC System Sync", icon='CHECKMARK')
+        utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='CHECKMARK')
+
+        # THÔNG BÁO _ Finish
+        # ----------
+        # ----------
+
+        # ----------
+        # ----------
+        # Cập nhật HUD - Start
+        utils.refresh_hud_data(obj, op_name="MAKE ROOT")
+        # Cập nhật HUD - Finish
+        # ----------
+        # ----------
 
     print(f"✅ Đã thực hiện MakeRoot cho {len(selected_objs)} objects.")
     return True
@@ -141,6 +158,14 @@ def make_reference(context):
         obj.id_properties_ui("CMC_IsRootObject").update(description="This is a reference object")
         obj.id_properties_ui("CMC_RootObjectId").update(description="ID of the parent Root object")
 
+    # ----------
+    # ----------
+    # Cập nhật HUD - Start
+    utils.refresh_hud_data(obj, op_name="MAKE ROOT")
+    # Cập nhật HUD - Finish
+    # ----------
+    # ---------- 
+
     print(f"✅ Đã thực hiện MakeReference cho {len(selected_objs)} objects.")
     return True
 
@@ -163,11 +188,53 @@ def make_root_from_reference(context):
     # 2. Kiểm tra điều kiện ID phải giống nhau (chứng tỏ vừa Alt+D xong)
     if "CMC_Id" not in active_obj.keys() or "CMC_Id" not in other_obj.keys():
         print("Lỗi: Một trong hai object chưa có ID.")
+
+        # ----------
+        # ---------- || ----------
+        # ---------- || ---------- || ----------
+        # THÔNG BÁO - Start
+
+        # Chuẩn bị nội dung thông báo
+        msg = [
+            "Tạo Bản Gốc Khoong Thành Công",
+            "Một trong hai Object chưa có ID",
+            f"Bản Gốc:        [{active_obj['CMC_Id']}] - {active_obj.name}",
+            f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
+        ]
+        # Gọi hàm hiển thị Popup nổi bật
+        utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='ERROR')
+
+        # THÔNG BÁO _ Finish
+        # ---------- || ---------- || ----------
+        # ---------- || ----------
+        # ----------
+
         return False
     
     shared_id = active_obj["CMC_Id"]
     if shared_id != other_obj["CMC_Id"]:
         print("Lỗi: ID của hai object không giống nhau. Không thể thiết lập liên kết Root.")
+        
+        # ----------
+        # ---------- || ----------
+        # ---------- || ---------- || ----------
+        # THÔNG BÁO - Start
+
+        # Chuẩn bị nội dung thông báo
+        msg = [
+            "Tạo Bản Gốc Khoong Thành Công",
+            "ID của hai Object không giống nhau. Không thể thiết lập liên kết Root",
+            f"Bản Gốc:        [{active_obj['CMC_Id']}] - {active_obj.name}",
+            f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
+        ]
+        # Gọi hàm hiển thị Popup nổi bật
+        utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='ERROR')
+
+        # THÔNG BÁO _ Finish
+        # ---------- || ---------- || ----------
+        # ---------- || ----------
+        # ----------
+        
         return False
 
     # --- TIẾN HÀNH CHUYỂN ĐỔI ---
@@ -195,6 +262,33 @@ def make_root_from_reference(context):
     # Khóa ID mới của A
     other_obj.id_properties_ui("CMC_Id").update(min=new_id_for_a, max=new_id_for_a)
     other_obj.id_properties_ui("CMC_RootObjectId").update(min=shared_id, max=shared_id)
+
+    # ----------
+    # ---------- || ----------
+    # ---------- || ---------- || ----------
+    # THÔNG BÁO - Start
+
+    # Chuẩn bị nội dung thông báo
+    msg = [
+        "Tạo Bản Gốc Thành Công",
+        f"Bản Gốc:        [{active_obj['CMC_Id']}] - {active_obj.name}",
+        f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
+    ]
+    # Gọi hàm hiển thị Popup nổi bật
+    utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='CHECKMARK')
+
+    # THÔNG BÁO _ Finish
+    # ---------- || ---------- || ----------
+    # ---------- || ----------
+    # ----------
+
+    # ----------
+    # ----------
+    # Cập nhật HUD - Start
+    utils.refresh_hud_data(active_obj, op_name="MAKE ROOT")
+    # Cập nhật HUD - Finish
+    # ----------
+    # ----------
 
     print(f"✅ Thành công! '{active_obj.name}' đã thành Root của '{other_obj.name}'")
     return True
@@ -276,6 +370,14 @@ def sync_reference_instances(context):
 
             count += 1
 
+    # ----------
+    # ----------
+    # Cập nhật HUD - Start
+    utils.refresh_hud_data(obj, op_name="MAKE ROOT")
+    # Cập nhật HUD - Finish
+    # ----------
+    # ----------
+
     print(f"✅ Đã đồng bộ (Sync) và làm mới ID cho {count} objects.")
     return True
 
@@ -283,9 +385,9 @@ def sync_reference_instances(context):
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
-def sync_root_properties(context):
+def sync_root_instances(context):
     """
-    Chỉ đồng bộ hóa cho các Root Object:
+    Chỉ đồng bộ hóa cho các Root Object: 
     Cập nhật RootObjectName khớp với tên object hiện tại.
     """
     updated_count = 0
@@ -309,6 +411,14 @@ def sync_root_properties(context):
                 )
                 updated_count += 1
                 
+    # ----------
+    # ----------
+    # Cập nhật HUD - Start
+    utils.refresh_hud_data(obj, op_name="MAKE ROOT")
+    # Cập nhật HUD - Finish
+    # ----------
+    # ----------
+
     print(f"✅ Đã đồng bộ RootObjectName cho {updated_count} Root Objects.")
     return True
 
@@ -396,9 +506,68 @@ def sync_position_data(context):
         # Khóa vị trí này lại nếu bạn muốn (tùy chọn)
         # root_obj.lock_location = (True, True, True)
 
+    # ----------
+    # ----------
+    # Cập nhật HUD - Start
+    utils.refresh_hud_data(obj, op_name="MAKE ROOT")
+    # Cập nhật HUD - Finish
+    # ----------
+    # ----------
+
     print(f"✅ Đã dọn dẹp xong: {len(root_objects)} Roots trong Library, các Ref đã vào DemoScene.")
     return True
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def export_position_data_to_json(context):
+
+    # Đường dẫn xuất file
+    output_path = "E:/Unity_Projects/My_First_Game/Assets/TestImportAssetFromBlender/Scripts/JSON_Data/positions.json"
+    
+    # Đảm bảo thư mục tồn tại
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    selected_objects = context.selected_objects
+    if not selected_objects: 
+        return False, 0
+
+    data = []
+    for obj in selected_objects:
+        # 1. Lấy tọa độ World Space
+        pos = obj.matrix_world.translation
+        
+        # 2. Thu thập dữ liệu Custom Properties (với giá trị mặc định nếu thiếu)
+        custom_props = {
+            "CMC_Id": obj.get("CMC_Id", -1),
+            "CMC_IsRootObject": bool(obj.get("CMC_IsRootObject", False)),
+            "CMC_RootObjectId": obj.get("CMC_RootObjectId", -1),
+            "CMC_RootObjectName": obj.get("CMC_RootObjectName", "")
+        }
+
+        # 3. Đóng gói dữ liệu
+        data.append({
+            "name": obj.name.rsplit('.', 1)[0],
+            # Toạ độ đã đảo trục Blender (Z-up) -> Unity (Y-up) theo công thức của bạn
+            "pos": {
+                "x": pos.x * (-1),
+                "y": pos.z,
+                "z": pos.y * (-1)
+            },
+            # Đưa toàn bộ metadata vào mục "properties"
+            "properties": custom_props
+        })
+
+    try:
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+        print(f"✅ Đã xuất {len(data)} đối tượng sang JSON tại: {output_path}")
+        return True, len(data)
+    except Exception as e:
+        print(f"❌ Lỗi khi xuất file: {e}")
+        return False, 0
+    
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____

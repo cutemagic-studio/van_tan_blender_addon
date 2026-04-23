@@ -379,23 +379,26 @@ def draw_hud(op, context):
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
-    bl_label = "Van Tan Ultimate"
-    bl_idname = "VIEW3D_PT_vt_main"
+    bl_label = "Công Cụ Tối Thượng"
+    bl_idname = "Cute_Magic_Ultimate"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = 'VT_Addon'
+    bl_category = 'CuteMagic'
 
     def draw(self, context):
         layout = self.layout
         ui = context.scene.vt_ui
         
-        # --- LEVEL 1: NHÓM CHÍNH (Object Tools) ---
+        # LEVEL 1:
+        # =========================================================================
+        # NHÓM 1: OBJECT
+        # =========================================================================
         main_box = layout.box()
         row = main_box.row(align=True)
         
         # Nút Dropdown chính
         prop_icon = 'TRIA_DOWN' if ui.show_object_group else 'TRIA_RIGHT'
-        row.prop(ui, "show_object_group", text="OBJECT DATABASE (CMC)", icon='NODE_COMPOSITING', emboss=False)
+        row.prop(ui, "show_object_group", text="ĐỐI TƯỢNG SIÊU CẤP", icon='NODE_COMPOSITING', emboss=False)
         row.label(text="", icon=prop_icon)
 
         if ui.show_object_group:
@@ -404,27 +407,159 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             sub_row = sub_box.row(align=True)
             
             sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_identity_sub else 'DISCLOSURE_TRI_RIGHT'
-            sub_row.prop(ui, "show_identity_sub", text="Identity Setup", icon='OUTLINER_OB_MESH', emboss=False)
+            sub_row.prop(ui, "show_identity_sub", text="Bản Gốc - Bản Tham Chiếu", icon='OUTLINER_OB_MESH', emboss=False)
             sub_row.label(text="", icon=sub_icon)
             
             if ui.show_identity_sub:
                 col = sub_box.column(align=True)
-                col.operator("vt.object_action", text="Make Root", icon='ADD').action = 'MAKE_ROOT'
-                col.operator("vt.object_action", text="Make Reference", icon='LINKED').action = 'MAKE_REF'
-            
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Tạo Bản Gốc (Thuần Mới Tạo)", icon='ADD')
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Tạo Bản Gốc (Shift + D)", icon='LINKED')
+                thaoTacQuanTrong03 = col.operator("vt.object_action", text="Tạo Bản Gốc (Alt + D)", icon='LINKED')
+
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.MAKE_ROOT' 
+                col.scale_y = 1.5
+
+                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.MAKE_ROOT_OBJECT_FORCE'
+                col.scale_y = 1.5
+
+                thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.MAKE_ROOT_OBJECT_FROM_REFERENCE'
+                col.scale_y = 1.5
+
+            if ui.show_identity_sub:
+                col = sub_box.column(align=True)
+                # col.separator()
+                col.operator("vt.object_action", text="Tạo Bản Tham Chiếu", icon='LINKED').action = 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT'
+                col.scale_y = 1.2
+
+
             # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) ---
             sub_box = main_box.box()
             sub_row = sub_box.row(align=True)
             
             sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_sync_sub else 'DISCLOSURE_TRI_RIGHT'
-            sub_row.prop(ui, "show_sync_sub", text="Sync & Organization", icon='FILE_REFRESH', emboss=False)
+            sub_row.prop(ui, "show_sync_sub", text="Đồng Bộ Hóa", icon='FILE_REFRESH', emboss=False)
             sub_row.label(text="", icon=sub_icon)
-            
+             
             if ui.show_sync_sub:
                 col = sub_box.column(align=True)
-                col.operator("vt.object_action", text="Sync References", icon='OUTLINER_OB_MESH').action = 'SYNC_REF'
+
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Bản Gốc (List Tự Động)", icon='OUTLINER_OB_MESH')
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.SYNC_ROOT_OBJECT'
+                col.scale_y = 1.5
+
                 col.separator()
-                # Nút quan trọng làm nổi bật hơn bằng scale_y
-                op = col.operator("vt.object_action", text="Clean & Move to Library", icon='COLLECTION_NEW')
-                op.action = 'SYNC_POS'
-                col.scale_y = 1.2
+
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Bản Tham Chiếu (List Chọn)", icon='COLLECTION_NEW')
+                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.SYNC_REFERENCE_OBJECT'
+                col.scale_y = 1.5
+
+                col.separator()
+
+                thaoTacQuanTrong03 = col.operator("vt.object_action", text="Vị Trí (Collection & Transform)", icon='OUTLINER_OB_MESH')
+                thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.SYNC_OBJECT_POSITION_DATA'
+                col.scale_y = 1.5
+
+            # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) ---
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_export_sub else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_sync_sub", text="Xuất Dữ Liệu", icon='FILE_REFRESH', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+             
+            if ui.show_sync_sub:
+                col = sub_box.column(align=True)
+
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Vị Trí Trong Scene", icon='OUTLINER_OB_MESH')
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.EXPORT_POSITION_DATA_TO_JSON'
+                col.scale_y = 1.5
+
+                col.separator()
+
+        # LEVEL 1:
+        # =========================================================================
+        # NHÓM 2: MESH
+        # =========================================================================
+        layout.separator() # Khoảng cách nhỏ giữa 2 nhóm chính
+        
+        util_box = layout.box()
+        row = util_box.row(align=True)
+        
+        # Bạn cần thêm biến "show_utils_group" vào trong class vt_ui của bạn
+        util_icon = 'TRIA_DOWN' if ui.show_utils_group else 'TRIA_RIGHT'
+        row.prop(ui, "show_utils_group", text="SCENE UTILITIES", icon='SCENE_DATA', emboss=False)
+        row.label(text="", icon=util_icon)
+        
+        if ui.show_utils_group:
+            col = util_box.column(align=True)
+            col.operator("vt.object_action", text="Clean Scene", icon='X').action = 'CLEAN_SCENE'
+            col.operator("vt.object_action", text="Fix Origins", icon='OBJECT_ORIGIN').action = 'FIX_ORIGIN'
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ 1. Persistent Header Info (Ghi vào thanh trạng thái)
+# Loại này sẽ luôn hiển thị ở dưới đáy màn hình Blender, rất nhẹ nhàng và không làm phiền người dùng.#
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def draw_cmc_status(self, context):
+    layout = self.layout
+    # Chỉ hiển thị khi có object được chọn
+    if context.active_object:
+        row = layout.row(align=True)
+        row.separator(factor=2.0)
+        row.label(text="CMC:", icon='NODE_COMPOSITING')
+        row.label(text=f"Target: {context.active_object.name}", icon='OBJECT_DATA')
+
+# Thêm vào cuối hàm register() trong __init__.py:
+# bpy.types.STATUSBAR_HT_header.append(draw_cmc_status)
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ 4. Custom Floating Dialog (Hộp thoại tùy biến)
+# Dùng để hiển thị các bảng thông tin chi tiết mà không có nút OK/Cancel mặc định.
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+class VT_OT_CustomDialog(bpy.types.Operator):
+    bl_idname = "vt.custom_dialog"
+    bl_label = "Thông Báo Tối Thượng"
+
+    def draw(self, context):
+        layout = self.layout
+        box = layout.box()
+        box.label(text="System Log", icon='INFO')
+        col = box.column(align=True)
+        col.label(text="- Sync: Success", icon='CHECKMARK')
+        col.label(text="- Memory: Stable", icon='DRIVER_DISTANCE')
+        
+    def execute(self, context):
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self, width=250)
+    
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def draw_cmc_status(self, context):
+    layout = self.layout
+    # Chỉ hiển thị khi có đối tượng đang được chọn
+    obj = context.active_object
+    if obj:
+        row = layout.row(align=True)
+        row.separator(factor=2.0) # Tạo khoảng cách với các thông tin mặc định của Blender
+        
+        # Hiển thị icon và tên đối tượng đang xử lý
+        row.label(text="CMC System:", icon='NODE_COMPOSITING')
+        row.label(text=f"Target: {obj.name}", icon='OBJECT_DATA')
+        
+        # Nếu muốn hiển thị trạng thái Sync (ví dụ từ biến global hoặc scene property)
+        if hasattr(context.scene, "vt_ui"):
+            status_text = "Ready" if not context.scene.vt_ui.show_sync_sub else "Syncing..."
+            row.label(text=status_text)
+
+    
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____

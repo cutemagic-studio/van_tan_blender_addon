@@ -10,67 +10,74 @@ bl_info = {
     "name": "Van Tan Ultimate Tools",
     "author": "Van Tan",
     "version": (1, 0),
-    "blender": (4, 0, 0), # Hoặc (5, 0, 0) tùy phiên bản bạn dùng
+    "blender": (4, 0, 0), 
     "location": "View3D > Sidebar > VT_Addon",
     "description": "Hệ thống quản lý Object và Mesh tối ưu cho Unity",
     "category": "Object",
 }
 
 import bpy
-from . import constants, utils
-from . import operators, keymaps, hud
+from . import constants, utils, operators, keymaps, hud
 
-# Cơ chế Reload để phát triển
+# Cơ chế Reload để phát triển (Giữ nguyên - rất tốt cho Dev)
 if "bpy" in locals():
     import importlib
-    importlib.reload(constants) # Thêm dòng này
+    importlib.reload(constants)
     importlib.reload(operators)
     importlib.reload(keymaps)
     importlib.reload(utils)
     importlib.reload(hud)
 
-def register(): 
-    operators.register()
-    keymaps.register()
-    hud.register()
-
-def unregister():
-    hud.unregister()
-    keymaps.unregister()
-    operators.unregister()
-
-#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
-#|||||_____|||||_____
-#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
-
 # Danh sách các class theo đúng thứ tự ưu tiên
 classes = [
-    constants.VT_UI_Settings,         # 1. Đăng ký Group lưu trữ dữ liệu trước
-    operators.VT_OT_ObjectAction,    # 2. Đăng ký lệnh thực thi
-    hud.VIEW3D_PT_VT_ObjectTools,    # 3. Đăng ký giao diện hiển thị
+    constants.VT_UI_Settings,      # Đăng ký Group dữ liệu đầu tiên
+    operators.CMC_GiaoDienThucThiChucNang,  # Các lệnh thực thi
+    utils.VT_OT_ShowMessage,       # Các tiện ích thông báo
+    hud.VT_OT_CustomDialog,        # Hộp thoại Dashboard
+    hud.VIEW3D_PT_VT_ObjectTools,  # Panel giao diện cuối cùng
 ]
 
 def register():
-    # Bước A: Đăng ký các class vào hệ thống Blender
+    # 1. Đăng ký các class
     for cls in classes:
         bpy.utils.register_class(cls)
     
-    # Bước B: Khởi tạo PointerProperty vào Scene
-    # Điều này cho phép context.scene.vt_ui tồn tại để HUD có thể vẽ được
+    # 2. Khởi tạo dữ liệu vào Scene
     bpy.types.Scene.vt_ui = bpy.props.PointerProperty(type=constants.VT_UI_Settings)
     
+    # 3. Đăng ký Keymaps
+    keymaps.register()
+    
+    # 4. Đăng ký các thành phần giao diện đặc biệt
+    bpy.types.STATUSBAR_HT_header.append(hud.draw_cmc_status)
+    
+    # 5. Kích hoạt HUD (Vẽ GPU)
+    utils.toggle_hud(True)
+
     print("✅ Van Tan Tools đã được đăng ký!")
 
 def unregister():
-    # Bước A: Xóa PointerProperty trước để tránh lỗi dữ liệu mồ côi
-    del bpy.types.Scene.vt_ui
+    # 1. Gỡ HUD và Status Bar trước (Tránh lỗi vẽ khi class đã mất)
+    utils.toggle_hud(False)
+    if hasattr(bpy.types.STATUSBAR_HT_header, "remove"):
+        # Dùng try-except để tránh lỗi nếu người dùng nhấn F3 Reload nhiều lần
+        try:
+            bpy.types.STATUSBAR_HT_header.remove(hud.draw_cmc_status)
+        except:
+            pass
+
+    # 2. Gỡ Keymaps
+    keymaps.unregister()
+
+    # 3. Xóa dữ liệu Scene
+    if hasattr(bpy.types.Scene, "vt_ui"):
+        del bpy.types.Scene.vt_ui
     
-    # Bước B: Gỡ đăng ký các class theo thứ tự ngược lại (An toàn hơn)
+    # 4. Gỡ đăng ký các class
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
     
     print("❌ Van Tan Tools đã gỡ đăng ký!")
 
-# Cho phép chạy script trực tiếp từ Text Editor của Blender để test nhanh
 if __name__ == "__main__":
     register()

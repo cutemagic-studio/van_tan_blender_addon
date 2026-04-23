@@ -460,8 +460,9 @@ def unregister():
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+from . import utils
 
-class VT_OT_ObjectAction(bpy.types.Operator):
+class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
     """Thực thi các lệnh liên quan đến CMC Object System"""
     bl_idname = "vt.object_action"
     bl_label = "Object Action"
@@ -470,14 +471,84 @@ class VT_OT_ObjectAction(bpy.types.Operator):
     # Nhận tham số để biết cần gọi hàm nào
     action : bpy.props.StringProperty() # type: ignore
 
+    @classmethod
+    def description(cls, context, properties):
+        # Đây chính là nơi tạo "Hint Label" dựa trên hành động
+        if properties.action == 'FUNCTION.OBJECT.MAKE_ROOT':
+            return "Tạo bản gốc cho đối tượng đang chọn (Active), \n đây là đối tượng mới tạo và chưa từng tạo bản gốc"
+        
+        if properties.action == 'FUNCTION.OBJECT.MAKE_ROOT_OBJECT_FORCE':
+            return "Chọn 2 đối tượng A và B (Active), Trong đó B là đối tượng mới tạo bằng [SHIFT + D] từ đối tượng A, Thao tác này Tạo bản gốc cho đối tượng đang chọn B (Active)"
+        
+        if properties.action == 'FUNCTION.OBJECT.MAKE_ROOT_OBJECT_FROM_REFERENCE':
+            return "Chọn 2 đối tượng A và B (Active), Trong đó B đây là đối tượng mới tạo bằng [ALT + D] từ đối tượng A, Thao tác này Tạo bản gốc cho đối tượng đang chọn B (Active), "
+        
+        if properties.action == 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT':
+            return "Tạo bản tham chiếu cho đối tượng đang chọn (Active)"
+            
+        return "Thực hiện phép thuật CMC"
+
     def execute(self, context):
-        if self.action == 'MAKE_ROOT':
-            object_tools.make_root(context)
-        elif self.action == 'MAKE_REF':
-            object_tools.make_reference(context)
-        elif self.action == 'SYNC_REF':
-            object_tools.sync_reference_instances(context)
-        elif self.action == 'SYNC_POS':
-            object_tools.sync_position_data(context)
+
+        ##### 
+
+        if self.action == 'FUNCTION.OBJECT.MAKE_ROOT':
+            success = object_tools.make_root(context)
+            if success:
+                self.report({'INFO'}, "✅ Tạo Bản Gốc Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+            
+        elif self.action == 'FUNCTION.OBJECT.MAKE_ROOT_OBJECT_FORCE':
+            success = object_tools.make_root(context, force = True)
+            if success:
+                self.report({'INFO'}, "✅ Tạo Bản Gốc Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.MAKE_ROOT_OBJECT_FROM_REFERENCE':
+            success = object_tools.make_root_from_reference(context)
+            if success:
+                self.report({'INFO'}, "✅ Tạo Bản Gốc Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT':
+            success = object_tools.make_reference(context)
+            if success:
+                self.report({'INFO'}, "✅ Tạo Bản Tham Chiếu Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        #####
+
+        elif self.action == 'FUNCTION.OBJECT.SYNC_ROOT_OBJECT':
+            success = object_tools.sync_root_instances(context)
+            if success:
+                self.report({'INFO'}, "✅ Đồng Bộ Hóa Bản Gốc Thành Công! (Danh Sách Tự Động)")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.SYNC_REFERENCE_OBJECT':
+            success = object_tools.sync_reference_instances(context)
+            if success:
+                self.report({'INFO'}, "✅ Đồng Bộ Hóa Bản Tham Chiếu Thành Công! (Danh Sách Chọn)")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.SYNC_OBJECT_POSITION_DATA':
+            success = object_tools.sync_position_data(context)
+            if success:
+                self.report({'INFO'}, "✅ Đồng Bộ Hóa Dữ Liệu Vị Trí Thành Công! (Danh Sách Chọn)")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+
+        elif self.action == 'FUNCTION.OBJECT.EXPORT_POSITION_DATA_TO_JSON':
+            success = object_tools.export_position_data_to_json(context)
+            if success:
+                self.report({'INFO'}, "✅ Xuất Dữ Liệu Vị Trí Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
             
         return {'FINISHED'}

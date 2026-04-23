@@ -125,6 +125,10 @@ class VT_UI_Settings(bpy.types.PropertyGroup):
     # Toggle cho các nhóm con bên trong (Sub-menus)
     show_identity_sub : bpy.props.BoolProperty(name="Identity Setup", default=True) # type: ignore
     show_sync_sub : bpy.props.BoolProperty(name="Sync & Clean", default=False) # type: ignore
+    show_export_sub : bpy.props.BoolProperty(name="Xuất Dữ Liệu", default=False) # type: ignore
+
+    # Thêm biến này để điều khiển dropdown thứ 2
+    show_utils_group : bpy.props.BoolProperty(default=False) # type: ignore
 
 def register():
     bpy.utils.register_class(VT_UI_Settings)
