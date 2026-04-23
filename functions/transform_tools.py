@@ -3,6 +3,10 @@ import mathutils
 import os
 from mathutils import Vector
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
 def origin_to_bottom():
     obj = bpy.context.active_object
     if obj and obj.type == 'MESH':
@@ -21,6 +25,10 @@ def origin_to_bottom():
         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
         bpy.context.scene.cursor.location = old_cursor_loc
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
 def drop_to_floor():
     obj = bpy.context.active_object
     if obj and obj.type == 'MESH':
@@ -31,50 +39,9 @@ def drop_to_floor():
         min_z = min((matrix_w @ v.co).z for v in obj.data.vertices)
         obj.location.z -= min_z
 
-# =========================
-# Origin → Bottom (multi)
-# =========================
-# def origin_to_bottom_selected():
-#     selected = bpy.context.selected_objects
-#     if not selected:
-#         print("Không có object nào được chọn")
-#         return
-
-#     # Lưu cursor
-#     old_cursor = bpy.context.scene.cursor.location.copy()
-
-#     for obj in selected:
-#         if obj.type != 'MESH':
-#             continue
-
-#         bpy.context.view_layer.objects.active = obj
-
-#         if bpy.context.mode != 'OBJECT':
-#             bpy.ops.object.mode_set(mode='OBJECT')
-
-#         # Lưu world transform
-#         mw = obj.matrix_world.copy()
-
-#         # Tính bounding box world
-#         bbox = [mw @ mathutils.Vector(v) for v in obj.bound_box]
-
-#         min_z = min(v.z for v in bbox)
-#         center_x = sum(v.x for v in bbox) / 8
-#         center_y = sum(v.y for v in bbox) / 8
-
-#         # Move cursor
-#         bpy.context.scene.cursor.location = (center_x, center_y, min_z)
-
-#         # Set origin
-#         bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
-
-#         # Restore transform (🔥 quan trọng)
-#         obj.matrix_world = mw
-
-#     # Restore cursor
-#     bpy.context.scene.cursor.location = old_cursor
-
-#     print(f"Đã xử lý origin cho {len(selected)} object(s)")
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def origin_to_bottom_selected():
     # 1. Lưu danh sách các object đang chọn ban đầu
@@ -126,9 +93,10 @@ def origin_to_bottom_selected():
 
     print(f"✅ Đã xử lý Origin độc lập cho {len(original_selection)} object(s)")
 
-# =========================
-# Drop to floor (multi)
-# =========================
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
 def drop_to_floor_selected():
     selected = bpy.context.selected_objects
     if not selected:
@@ -162,17 +130,20 @@ def drop_to_floor_selected():
 
     print(f"Đã drop {len(selected)} object(s) xuống floor")
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
-# =========================
-# Gộp lại (1-click)
-# =========================
 def prepare_selected_for_unity():
     origin_to_bottom_selected()
     drop_to_floor_selected() 
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
-def export_each_object_to_fbx(context, export_folder="X:/UNITY_STORE/ALL_PACK/EXPORT_FBX_ALL"):
-# def export_each_object_to_fbx(context, export_folder="G:/Blender_Export_Data_Json/"):
+# def export_each_object_to_fbx(context, export_folder="X:/UNITY_STORE/ALL_PACK/EXPORT_FBX_ALL"):
+def export_each_object_to_fbx(context, export_folder="G:/Blender_Export_Data_Json/"):
     # Đảm bảo thư mục tồn tại
     if not os.path.exists(export_folder):
         os.makedirs(export_folder)
@@ -239,3 +210,6 @@ def export_each_object_to_fbx(context, export_folder="X:/UNITY_STORE/ALL_PACK/EX
     print(f"DONE EXPORT: {len(selected_objs)} files in {export_folder}")
     return True
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____

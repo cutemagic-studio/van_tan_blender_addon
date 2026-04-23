@@ -4,6 +4,7 @@ from .functions import transform_tools
 from .functions import mesh_tools
 from .functions import object_tools
 
+
 from . import hud, constants  # Import constants
 from .functions import transform_tools, mesh_tools
 
@@ -45,6 +46,8 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
             # THỰC THI
             ##### [STATE_OBJECT] 
             elif self.state == constants.STATE_OBJECT:
+
+                ##### [] 
                 if event.type == constants.KEY_EXEC_1:
                     success = object_tools.make_root(context)
                     if success:
@@ -54,6 +57,7 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
                 
+                ##### [] 
                 if event.type == constants.KEY_EXEC_2:
                     success = object_tools.make_root(context, force = True)
                     if success:
@@ -63,6 +67,7 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
                 
+                ##### [] 
                 if event.type == constants.KEY_EXEC_3:
                     success = object_tools.make_root_from_reference(context)
                     if success:
@@ -72,6 +77,7 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
 
+                ##### [] 
                 if event.type == constants.KEY_EXEC_4:
                     success = object_tools.make_reference(context)
                     if success:
@@ -81,7 +87,18 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
                 
+                ##### [] 
                 if event.type == constants.KEY_EXEC_5:
+                    success = object_tools.sync_root_instances(context)
+                    if success:
+                        self.report({'INFO'}, "Đồng bộ hóa danh sách Obj root thành công!")
+                    else:
+                        self.report({'WARNING'}, "Đồng bộ hóa danh sách Obj root xảy ra lỗi!")
+
+                    return self.finish(context)
+                
+                ##### [] 
+                if event.type == constants.KEY_EXEC_6:
                     success = object_tools.sync_reference_instances(context)
                     if success:
                         self.report({'INFO'}, "Đồng bộ hóa danh sách Obj tham chiếu thành công!")
@@ -90,7 +107,8 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
 
                     return self.finish(context)
                 
-                if event.type == constants.KEY_EXEC_6:
+                ##### [] 
+                if event.type == constants.KEY_EXEC_7:
                     success = object_tools.sync_position_data(context)
                     if success:
                         self.report({'INFO'}, "Đồng bộ hóa dữ liệu vị trí (Collection & Transform) thành công!")
@@ -438,3 +456,28 @@ def register():
 
 def unregister():
     bpy.utils.unregister_class(OBJECT_OT_vt_ultimate_tool)
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+class VT_OT_ObjectAction(bpy.types.Operator):
+    """Thực thi các lệnh liên quan đến CMC Object System"""
+    bl_idname = "vt.object_action"
+    bl_label = "Object Action"
+    bl_description = "Execute CMC Object System functions"
+    
+    # Nhận tham số để biết cần gọi hàm nào
+    action : bpy.props.StringProperty() # type: ignore
+
+    def execute(self, context):
+        if self.action == 'MAKE_ROOT':
+            object_tools.make_root(context)
+        elif self.action == 'MAKE_REF':
+            object_tools.make_reference(context)
+        elif self.action == 'SYNC_REF':
+            object_tools.sync_reference_instances(context)
+        elif self.action == 'SYNC_POS':
+            object_tools.sync_position_data(context)
+            
+        return {'FINISHED'}

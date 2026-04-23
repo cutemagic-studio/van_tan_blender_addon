@@ -1,4 +1,5 @@
 import blf
+import bpy
 from . import constants
 
 def draw_hud(op, context):
@@ -49,8 +50,9 @@ def draw_hud(op, context):
             (constants.LABEL_EXEC_2, constants.LABEL_OBJECT_MAKE_ROOT_OBJECT_FORCE),
             (constants.LABEL_EXEC_3, constants.LABEL_OBJECT_MAKE_ROOT_OBJECT_FROM_REFERENCE),
             (constants.LABEL_EXEC_4, constants.LABEL_OBJECT_MAKE_REFERENCE_OBJECT),
-            (constants.LABEL_EXEC_5, constants.LABEL_OBJECT_SYNC_REFERENCE_OBJECT),
-            (constants.LABEL_EXEC_6, constants.LABEL_OBJECT_SYNC_OBJECT_POSITION_DATA),
+            (constants.LABEL_EXEC_5, constants.LABEL_OBJECT_SYNC_ROOT_OBJECT),
+            (constants.LABEL_EXEC_6, constants.LABEL_OBJECT_SYNC_REFERENCE_OBJECT),
+            (constants.LABEL_EXEC_7, constants.LABEL_OBJECT_SYNC_OBJECT_POSITION_DATA),
         ]
 
         for i, (label, name) in enumerate(object_commands):
@@ -367,3 +369,62 @@ def draw_hud(op, context):
     blf.color(font_id, 1, 0.3, 0.3, 0.8)
     blf.position(font_id, x, footer_y, 0)
     blf.draw(font_id, "[ESC / RMB] to Cancel")
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
+    bl_label = "Van Tan Ultimate"
+    bl_idname = "VIEW3D_PT_vt_main"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = 'VT_Addon'
+
+    def draw(self, context):
+        layout = self.layout
+        ui = context.scene.vt_ui
+        
+        # --- LEVEL 1: NHÓM CHÍNH (Object Tools) ---
+        main_box = layout.box()
+        row = main_box.row(align=True)
+        
+        # Nút Dropdown chính
+        prop_icon = 'TRIA_DOWN' if ui.show_object_group else 'TRIA_RIGHT'
+        row.prop(ui, "show_object_group", text="OBJECT DATABASE (CMC)", icon='NODE_COMPOSITING', emboss=False)
+        row.label(text="", icon=prop_icon)
+
+        if ui.show_object_group:
+            # --- LEVEL 2: NHÓM CON 1 (Identity) ---
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_identity_sub else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_identity_sub", text="Identity Setup", icon='OUTLINER_OB_MESH', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_identity_sub:
+                col = sub_box.column(align=True)
+                col.operator("vt.object_action", text="Make Root", icon='ADD').action = 'MAKE_ROOT'
+                col.operator("vt.object_action", text="Make Reference", icon='LINKED').action = 'MAKE_REF'
+            
+            # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) ---
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_sync_sub else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_sync_sub", text="Sync & Organization", icon='FILE_REFRESH', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_sync_sub:
+                col = sub_box.column(align=True)
+                col.operator("vt.object_action", text="Sync References", icon='OUTLINER_OB_MESH').action = 'SYNC_REF'
+                col.separator()
+                # Nút quan trọng làm nổi bật hơn bằng scale_y
+                op = col.operator("vt.object_action", text="Clean & Move to Library", icon='COLLECTION_NEW')
+                op.action = 'SYNC_POS'
+                col.scale_y = 1.2

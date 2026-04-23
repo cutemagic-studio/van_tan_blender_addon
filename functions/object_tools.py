@@ -1,5 +1,10 @@
 import bpy
 import time
+from .. import utils
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def create_custom_property(obj, prop_name, default_value, force_update=False):
     """
@@ -32,6 +37,10 @@ def create_custom_property(obj, prop_name, default_value, force_update=False):
         print(f"Thất bại: Có lỗi xảy ra khi tạo property: {e}")
         return False
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
 def generate_unique_id(index_offset=0):
     """
     Tạo một ID duy nhất dựa trên timestamp (giây) + số thứ tự.
@@ -41,6 +50,10 @@ def generate_unique_id(index_offset=0):
     timestamp = int(time.time())
     # Cộng thêm index_offset để phân biệt các object xử lý cùng 1 lúc
     return timestamp + index_offset
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def make_root(context, force = False):
     selected_objs = context.selected_objects
@@ -80,6 +93,15 @@ def make_root(context, force = False):
         
         root_ui = obj.id_properties_ui("CMC_IsRootObject")
         root_ui.update(description="Mark this object as a Root reference")
+
+        # Chuẩn bị nội dung thông báo 
+        msg = [
+            "Quá trình đồng bộ hoàn tất:",
+            "- Đã xử lý: 1000 objects",
+            "- Trạng thái: ✅ Thành công",
+        ]
+        # Gọi hàm hiển thị Popup nổi bật
+        utils.show_detailed_message(msg, title="CMC System Sync", icon='CHECKMARK')
 
     print(f"✅ Đã thực hiện MakeRoot cho {len(selected_objs)} objects.")
     return True
@@ -197,7 +219,6 @@ def sync_reference_instances(context):
         print("Lỗi: Object mẫu không có đủ thuộc tính ID/Root.")
         return False
 
-    reference_id = first_obj["CMC_Id"]
     reference_root_id = first_obj["CMC_RootObjectId"]
 
     for obj in selected_objs:
@@ -262,6 +283,39 @@ def sync_reference_instances(context):
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
+def sync_root_properties(context):
+    """
+    Chỉ đồng bộ hóa cho các Root Object:
+    Cập nhật RootObjectName khớp với tên object hiện tại.
+    """
+    updated_count = 0
+    
+    # Duyệt qua toàn bộ object trong file
+    for obj in bpy.data.objects:
+        # Kiểm tra xem có phải là Root Object không
+        is_root = obj.get("CMC_IsRootObject")
+        
+        if is_root is True or is_root == 1:
+            # Lấy tên hiện tại trong Outliner
+            current_name = obj.name
+            
+            # Cập nhật vào thuộc tính RootObjectName
+            if obj.get("CMC_RootObjectName") != current_name:
+                obj["CMC_RootObjectName"] = current_name
+                
+                # Cập nhật UI để người dùng biết đây là tên định danh
+                obj.id_properties_ui("CMC_RootObjectName").update(
+                    description=f"IDENTIFIER: Matches object name for Unity linking"
+                )
+                updated_count += 1
+                
+    print(f"✅ Đã đồng bộ RootObjectName cho {updated_count} Root Objects.")
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
 def get_or_create_collection(name):
     """Lấy collection đã có hoặc tạo mới nếu chưa tồn tại"""
     collection = bpy.data.collections.get(name)
@@ -269,6 +323,10 @@ def get_or_create_collection(name):
         collection = bpy.data.collections.new(name)
         bpy.context.scene.collection.children.link(collection)
     return collection
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def move_to_collection(obj, target_col):
     """
@@ -291,7 +349,12 @@ def move_to_collection(obj, target_col):
         if col != target_col:
             col.objects.unlink(obj)
 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
 def sync_position_data(context):
+
     # 1. Khởi tạo/Lấy các Collection
     demo_col = get_or_create_collection("CMC_Demo_Scene")
     library_col = get_or_create_collection("CMC_Library_Scene")
@@ -335,3 +398,7 @@ def sync_position_data(context):
 
     print(f"✅ Đã dọn dẹp xong: {len(root_objects)} Roots trong Library, các Ref đã vào DemoScene.")
     return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____

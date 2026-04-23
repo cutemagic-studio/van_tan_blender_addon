@@ -1,5 +1,6 @@
-KEY_BACK = 'BACK_SPACE'
+import bpy
 
+KEY_BACK = 'BACK_SPACE'
 
 # Quản lý các trạng thái Menu
 STATE_MAIN = 'MAIN'
@@ -16,6 +17,8 @@ LABEL_OBJECT_MAKE_ROOT_OBJECT = 'Make Root Object'
 LABEL_OBJECT_MAKE_ROOT_OBJECT_FORCE = 'Make Root Object (Force From Shift_D)'
 LABEL_OBJECT_MAKE_ROOT_OBJECT_FROM_REFERENCE = 'Make Root Object From Reference (Alt_D)'
 LABEL_OBJECT_MAKE_REFERENCE_OBJECT = 'Make Reference Object'
+
+LABEL_OBJECT_SYNC_ROOT_OBJECT = 'Sync Root Object'
 LABEL_OBJECT_SYNC_REFERENCE_OBJECT = 'Sync Reference Object'
 LABEL_OBJECT_SYNC_OBJECT_POSITION_DATA = 'Sync Object Position Data (Collection & Transform)'
 
@@ -110,3 +113,23 @@ INSET_THICKNESS_006 = 0.06
 INSET_THICKNESS_007 = 0.07
 INSET_THICKNESS_008 = 0.08
 INSET_THICKNESS_009 = 0.09
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+class VT_UI_Settings(bpy.types.PropertyGroup):
+    # Toggle cho các nhóm chính
+    show_object_group : bpy.props.BoolProperty(name="Object Database", default=True) # type: ignore
+    
+    # Toggle cho các nhóm con bên trong (Sub-menus)
+    show_identity_sub : bpy.props.BoolProperty(name="Identity Setup", default=True) # type: ignore
+    show_sync_sub : bpy.props.BoolProperty(name="Sync & Clean", default=False) # type: ignore
+
+def register():
+    bpy.utils.register_class(VT_UI_Settings)
+    bpy.types.Scene.vt_ui = bpy.props.PointerProperty(type=VT_UI_Settings)
+
+def unregister():
+    bpy.utils.unregister_class(VT_UI_Settings)
+    del bpy.types.Scene.vt_ui
