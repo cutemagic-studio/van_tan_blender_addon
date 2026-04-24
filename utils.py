@@ -1,5 +1,6 @@
 import bpy
 import blf
+from mathutils import Vector
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
@@ -104,6 +105,18 @@ hud_data = {
     "refs": [],
 
     "CMC_Id": "",
+    "CMC_IsRootObject": False,
+    "CMC_IsReferenceObject": False,
+    "CMC_RootObjectName": "",
+
+    "": 0,
+
+    # X: Ngang (Width)
+    # Y: Sâu (Depth)
+    # Z: Cao (Height)
+    "CMC_X_Width": 0,
+    "CMC_Y_Depth": 0,
+    "CMC_Z_Height": 0,
 
     # Biến đếm làm mới dữ liệu
     "currentRefreshIndexCount": 0,
@@ -142,6 +155,12 @@ def update_object_stats(scene):
             hud_data["name"] = ""
             hud_data["props"] = {}
             hud_data["CMC_Id"] = "None"
+            hud_data["CMC_IsRootObject"] = False
+            hud_data["CMC_IsReferenceObject"] = False
+            hud_data["CMC_RootObjectName"] = ""
+            hud_data["CMC_X_Width"] = 0,
+            hud_data["CMC_Y_Depth"] = 0,
+            hud_data["CMC_Z_Height"] = 0,
             print(f"DEBUG: HUD Cleared | Name: '{hud_data.get('name')}'")
         return
 
@@ -164,6 +183,26 @@ def update_object_stats(scene):
     # Lấy Custom Properties an toàn
     hud_data["props"] = {k: obj[k] for k in obj.keys() if k not in '_RNA_UI'}
     hud_data["CMC_Id"] = hud_data["props"].get("CMC_Id", "None")
+    hud_data["CMC_IsRootObject"] = hud_data["props"].get("CMC_IsRootObject", False)
+    
+    if hud_data["props"].get("CMC_IsRootObject", False) == False and hud_data["props"].get("CMC_RootObjectId", -1) != -1:
+        hud_data["CMC_IsReferenceObject"] = True
+    else:
+        hud_data["CMC_IsReferenceObject"] = False
+     
+    dims = get_world_dimensions(obj)
+    hud_data["CMC_X_Width"] = dims.x
+    hud_data["CMC_Y_Depth"] = dims.y
+    hud_data["CMC_Z_Height"] = dims.z
+    if "CMC_X_Width" in obj.keys():
+        if obj.get("CMC_X_Width") != dims.x:
+            obj["CMC_X_Width"] = dims.x
+    if "CMC_Y_Depth" in obj.keys():
+        if obj.get("CMC_Y_Depth") != dims.y:
+            obj["CMC_Y_Depth"] = dims.y
+    if "CMC_Z_Height" in obj.keys():
+        if obj.get("CMC_Z_Height") != dims.z:
+            obj["CMC_Z_Height"] = dims.z
     
     # 2. Tìm Object tham chiếu (Vòng lặp nặng nằm ở đây)
     # found_refs = []
@@ -171,6 +210,24 @@ def update_object_stats(scene):
     #     if o != obj and obj.name in o.name:
     #         found_refs.append(o.name)
     # hud_data["CMC_Id"] = found_refs
+
+    # --- BƯỚC 2: TÌM TÊN CỦA ROOT OBJECT ---
+    root_name_found = "Unknown_Root"
+    reference_root_id = -1
+    if hud_data["props"].get("CMC_IsRootObject", False) == False and hud_data["props"].get("CMC_RootObjectId", -1) != -1:
+        reference_root_id = hud_data["props"].get("CMC_RootObjectId", -1)
+        
+        # Duyệt qua toàn bộ object trong file để tìm object có ID khớp với RootObjectId
+        for o in bpy.data.objects:
+            # Kiểm tra nếu object đó có ID và IsRootObject = True
+            if o.get("CMC_Id") == reference_root_id and (o.get("CMC_IsRootObject") is True or o.get("CMC_IsRootObject") == 1):
+                root_name_found = o.name
+                hud_data["CMC_RootObjectName"] = root_name_found
+                break
+    
+    if root_name_found == "Unknown_Root":
+        print(f"Cảnh báo: Không tìm thấy Root Object có ID {reference_root_id} trong file này.")
+
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
@@ -211,7 +268,7 @@ def draw_callback_px(self, context):
     # Nếu name là rỗng (đã được clear ở bước trên), ngừng vẽ ngay
     if not hud_data.get("name"):
 
-        print(f"DEBUG: '{hud_data.get('name')}'")
+        # print(f"DEBUG: '{hud_data.get('name')}'")
         return
 
     font_id = 0
@@ -219,22 +276,67 @@ def draw_callback_px(self, context):
     x_pos, y_pos = 30, 200
     
     # Vẽ tên (Màu xanh lá)
-    blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
+    # blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
+    # blf.position(font_id, x_pos, y_pos, 0)
+    # blf.draw(font_id, f"Đang chọn: {hud_data['name']}")
+
+    # 1. Thiết lập màu trắng xám nhẹ cho chữ "Đang chọn:"
+    blf.color(font_id, 0.8, 0.8, 0.8, 1.0) 
     blf.position(font_id, x_pos, y_pos, 0)
-    blf.draw(font_id, f"ACTIVE: {hud_data['name']}")
+    blf.draw(font_id, "Đang chọn: ")
+    # 2. Tính toán độ dài của chữ vừa vẽ để không bị đè lên nhau
+    # blf.dimensions trả về (width, height) của chuỗi text
+    text_width, text_height = blf.dimensions(font_id, "Đang chọn: ")
+    # 3. Thiết lập màu xanh cho tên Object
+    blf.color(font_id, 0.2, 1.0, 0.2, 1.0)
+    blf.position(font_id, x_pos + text_width, y_pos, 0) # Cộng thêm độ rộng của chữ trước đó
+    blf.draw(font_id, hud_data['name'])
+
+
     
     # Vẽ Custom Properties (Màu Cyan)
     if hud_data["CMC_Id"]:
         y_pos -= 25
-        blf.color(font_id, 0.0, 0.8, 1.0, 1.0)
-        blf.position(font_id, x_pos, y_pos, 0)
-        blf.draw(font_id, f"Id: {hud_data['CMC_Id']}")
+        # blf.color(font_id, 0.0, 0.8, 1.0, 1.0)
+        # blf.position(font_id, x_pos, y_pos, 0)
+        # blf.draw(font_id, f"Id: {hud_data['CMC_Id']}")
 
-        y_pos -= 25
-        blf.size(font_id, 16)
-        blf.color(font_id, 0.4, 1.0, 0.4, 1.0)
+        # 1. Thiết lập màu trắng xám nhẹ cho chữ "Id: "
+        blf.color(font_id, 0.8, 0.8, 0.8, 1.0) 
         blf.position(font_id, x_pos, y_pos, 0)
-        blf.draw(font_id, f"Refresh Time: {hud_data['currentRefreshIndexCount']} / {hud_data['neededRefreshIndexCount']}")
+        blf.draw(font_id, "Id: ")
+        # 2. Tính toán độ dài của chữ vừa vẽ để không bị đè lên nhau
+        # blf.dimensions trả về (width, height) của chuỗi text
+        text_width, text_height = blf.dimensions(font_id, "Id: ")
+        # 3. Thiết lập màu xanh cho Id Object
+        blf.color(font_id, 0.0, 0.8, 1.0, 1.0)
+        blf.position(font_id, x_pos + text_width, y_pos, 0) # Cộng thêm độ rộng của chữ trước đó
+        blf.draw(font_id, f"{hud_data['CMC_Id']}")
+
+        
+    #
+    if hud_data["CMC_IsRootObject"] == True:
+        y_pos -= 25
+        blf.color(font_id, 0.8, 0.2, 0.2, 1.0)
+        blf.position(font_id, x_pos, y_pos, 0)
+        blf.draw(font_id, "Obj gốc")
+    elif hud_data["CMC_IsReferenceObject"] == True:
+        y_pos -= 25
+        blf.color(font_id, 1.0, 0.8, 0.1, 1.0)
+        blf.position(font_id, x_pos, y_pos, 0)
+        blf.draw(font_id, f"Obj tham chiếu ({hud_data['CMC_RootObjectName']})")
+
+    y_pos -= 25
+    blf.color(font_id, 0.5, 0.9, 0.5, 1.0)
+    blf.position(font_id, x_pos, y_pos, 0)
+    blf.draw(font_id, f"(X): {hud_data['CMC_X_Width']:.2f}m x (Y): {hud_data['CMC_Y_Depth']:.2f}m x (Z): {hud_data['CMC_Z_Height']:.2f}m")
+
+    #
+    y_pos -= 25
+    blf.size(font_id, 12)
+    blf.color(font_id, 0.8, 0.8, 0.8, 1.0)
+    blf.position(font_id, x_pos, y_pos, 0)
+    blf.draw(font_id, f"Refresh Time: {hud_data['currentRefreshIndexCount']} / {hud_data['neededRefreshIndexCount']}")
     
 
 # def toggle_hud(enable):
@@ -266,3 +368,37 @@ def toggle_hud(enable):
         # 2. Gỡ sự kiện
         if update_object_stats in bpy.app.handlers.depsgraph_update_post:
             bpy.app.handlers.depsgraph_update_post.remove(update_object_stats)
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def get_world_dimensions(obj):
+    """
+    Trả về kích thước thực tế của Object trong không gian thế giới (World Space).
+    Tính toán dựa trên Bounding Box và Matrix World.
+    """
+    if not obj or obj.type == 'GPENCIL':
+        return Vector((0.0, 0.0, 0.0))
+
+    # Lấy tọa độ 8 góc của Bounding Box và nhân với ma trận thế giới
+    # matrix_world giúp tính cả Location, Rotation và Scale
+    bbox_world = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+
+    # Khởi tạo giá trị cực đại/cực tiểu từ điểm đầu tiên
+    first_corner = bbox_world[0]
+    min_x, min_y, min_z = first_corner
+    max_x, max_y, max_z = first_corner
+
+    # Duyệt qua các góc còn lại để tìm phạm vi bao phủ (Min/Max)
+    for corner in bbox_world[1:]:
+        if corner.x < min_x: min_x = corner.x
+        if corner.x > max_x: max_x = corner.x
+        
+        if corner.y < min_y: min_y = corner.y
+        if corner.y > max_y: max_y = corner.y
+        
+        if corner.z < min_z: min_z = corner.z
+        if corner.z > max_z: max_z = corner.z
+
+    return Vector((max_x - min_x, max_y - min_y, max_z - min_z))

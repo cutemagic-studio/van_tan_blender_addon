@@ -128,7 +128,25 @@ class VT_UI_Settings(bpy.types.PropertyGroup):
     show_export_sub : bpy.props.BoolProperty(name="Xuất Dữ Liệu", default=False) # type: ignore
 
     # Thêm biến này để điều khiển dropdown thứ 2
-    show_utils_group : bpy.props.BoolProperty(default=False) # type: ignore
+    show_arrange_group : bpy.props.BoolProperty(default=False) # type: ignore
+    # Đặt Obj vào ngăn xếp theo Hàng/Cột một cách tuần tự:
+    show_into_current_stack_sub : bpy.props.BoolProperty(name="show_into_current_stack_sub", default=False) # type: ignore
+        # Theo Hàng:
+            # Hướng đi vào thứ nhất: X(++)
+            # Hướng đi vào thứ hai: -Y(--)
+        # Theo Cột:
+            # Hướng đi vào thứ nhất: Z(++)
+            # Hướng đi vào thứ hai: -Z(--)
+    # Đặt Obj làm điểm neo mới (Nút đầu tiên của ngăn xếp mới) theo Hàng/Cột:
+    show_into_new_stack_sub : bpy.props.BoolProperty(name="show_into_new_stack_sub", default=False) # type: ignore
+        # Theo Hàng:
+            # Hướng đi vào thứ nhất: X(++)
+            # Hướng đi vào thứ hai: -Y(--)
+        # Theo Cột:
+            # Hướng đi vào thứ nhất: Z(++)
+            # Hướng đi vào thứ hai: -Z(--)
+    # Sắp xếp lại theo hình thức lưới Ngang/Dọc
+    show_rearrange_into_grid_sub : bpy.props.BoolProperty(name="show_rearrange_into_grid_sub", default=False) # type: ignore
 
 def register():
     bpy.utils.register_class(VT_UI_Settings)

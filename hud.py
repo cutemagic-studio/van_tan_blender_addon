@@ -407,13 +407,13 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             sub_row = sub_box.row(align=True)
             
             sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_identity_sub else 'DISCLOSURE_TRI_RIGHT'
-            sub_row.prop(ui, "show_identity_sub", text="Bản Gốc - Bản Tham Chiếu", icon='OUTLINER_OB_MESH', emboss=False)
+            sub_row.prop(ui, "show_identity_sub", text="Bản Gốc - Bản Tham Chiếu", icon='LINKED', emboss=False)
             sub_row.label(text="", icon=sub_icon)
             
             if ui.show_identity_sub:
                 col = sub_box.column(align=True)
                 thaoTacQuanTrong01 = col.operator("vt.object_action", text="Tạo Bản Gốc (Thuần Mới Tạo)", icon='ADD')
-                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Tạo Bản Gốc (Shift + D)", icon='LINKED')
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Tạo Bản Gốc (Shift + D)", icon='DUPLICATE')
                 thaoTacQuanTrong03 = col.operator("vt.object_action", text="Tạo Bản Gốc (Alt + D)", icon='LINKED')
 
                 thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.MAKE_ROOT' 
@@ -428,7 +428,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             if ui.show_identity_sub:
                 col = sub_box.column(align=True)
                 # col.separator()
-                col.operator("vt.object_action", text="Tạo Bản Tham Chiếu", icon='LINKED').action = 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT'
+                col.operator("vt.object_action", text="Tạo Bản Tham Chiếu", icon='RESTRICT_SELECT_OFF').action = 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT'
                 col.scale_y = 1.2
 
 
@@ -443,19 +443,19 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             if ui.show_sync_sub:
                 col = sub_box.column(align=True)
 
-                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Bản Gốc (List Tự Động)", icon='OUTLINER_OB_MESH')
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Bản Gốc (List Tự Động)", icon='FILE_REFRESH')
                 thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.SYNC_ROOT_OBJECT'
                 col.scale_y = 1.5
 
                 col.separator()
 
-                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Bản Tham Chiếu (List Chọn)", icon='COLLECTION_NEW')
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Bản Tham Chiếu (List Chọn)", icon='FILE_REFRESH')
                 thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.SYNC_REFERENCE_OBJECT'
                 col.scale_y = 1.5
 
                 col.separator()
 
-                thaoTacQuanTrong03 = col.operator("vt.object_action", text="Vị Trí (Collection & Transform)", icon='OUTLINER_OB_MESH')
+                thaoTacQuanTrong03 = col.operator("vt.object_action", text="Vị Trí (Collection & Transform)", icon='ORIENTATION_GIMBAL')
                 thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.SYNC_OBJECT_POSITION_DATA'
                 col.scale_y = 1.5
 
@@ -464,13 +464,13 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             sub_row = sub_box.row(align=True)
             
             sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_export_sub else 'DISCLOSURE_TRI_RIGHT'
-            sub_row.prop(ui, "show_sync_sub", text="Xuất Dữ Liệu", icon='FILE_REFRESH', emboss=False)
+            sub_row.prop(ui, "show_export_sub", text="Xuất Dữ Liệu", icon='EXPORT', emboss=False)
             sub_row.label(text="", icon=sub_icon)
              
-            if ui.show_sync_sub:
+            if ui.show_export_sub:
                 col = sub_box.column(align=True)
 
-                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Vị Trí Trong Scene", icon='OUTLINER_OB_MESH')
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Vị Trí Trong Scene", icon='OUTLINER_COLLECTION')
                 thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.EXPORT_POSITION_DATA_TO_JSON'
                 col.scale_y = 1.5
 
@@ -478,22 +478,91 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
         # LEVEL 1:
         # =========================================================================
-        # NHÓM 2: MESH
+        # NHÓM 2: SẮP XẾP
         # =========================================================================
         layout.separator() # Khoảng cách nhỏ giữa 2 nhóm chính
         
-        util_box = layout.box()
-        row = util_box.row(align=True)
+        main_box = layout.box()
+        row = main_box.row(align=True)
         
-        # Bạn cần thêm biến "show_utils_group" vào trong class vt_ui của bạn
-        util_icon = 'TRIA_DOWN' if ui.show_utils_group else 'TRIA_RIGHT'
-        row.prop(ui, "show_utils_group", text="SCENE UTILITIES", icon='SCENE_DATA', emboss=False)
+        #
+        util_icon = 'TRIA_DOWN' if ui.show_arrange_group else 'TRIA_RIGHT'
+        row.prop(ui, "show_arrange_group", text="SẮP XẾP TỐI THƯỢNG", icon='COLLAPSEMENU', emboss=False)
         row.label(text="", icon=util_icon)
         
-        if ui.show_utils_group:
-            col = util_box.column(align=True)
-            col.operator("vt.object_action", text="Clean Scene", icon='X').action = 'CLEAN_SCENE'
-            col.operator("vt.object_action", text="Fix Origins", icon='OBJECT_ORIGIN').action = 'FIX_ORIGIN'
+        if ui.show_arrange_group:
+
+            # --- CHÈN CONFIG VÀO ĐÂY ---
+            cfg = context.scene.cmc_sorting_config
+            
+            settings_box = main_box.box()
+            settings_box.label(text="Cấu Hình Sắp Xếp:", icon='LINENUMBERS_ON')
+            
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "spacing", text="Cách")
+            row_settings.prop(cfg, "max_per_row", text="Hàng")
+            row_settings.prop(cfg, "max_per_col", text="Cột")
+            
+            settings_box.prop(cfg, "align_to_bottom") # Option căn lề đáy
+            # ---------------------------
+
+
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_into_current_stack_sub else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_into_current_stack_sub", text="Đẩy Vào Ngăn Xếp Tuần Tự", icon='LINENUMBERS_ON', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_into_current_stack_sub:
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào +X++", icon='BACK')
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào -Y--", icon='BACK')
+                thaoTacQuanTrong03 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào +Z++", icon='BACK')
+                thaoTacQuanTrong04 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào -Z--", icon='BACK')
+
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.ARRANGE.INTO_CURRENT_STACK.+X++' 
+                
+
+                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.ARRANGE.INTO_CURRENT_STACK.-Y--'
+                
+
+                thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.ARRANGE.INTO_CURRENT_STACK.+Z++'
+                
+
+                thaoTacQuanTrong04.action = 'FUNCTION.OBJECT.ARRANGE.INTO_CURRENT_STACK.-Z--'
+                
+                col.scale_y = 1.5
+
+            #####
+            
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_into_new_stack_sub else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_into_new_stack_sub", text="Đẩy Vào Ngăn Xếp Mới", icon='LINENUMBERS_ON', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_into_new_stack_sub:
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào +X++", icon='BACK')
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào -Y--", icon='BACK')
+                thaoTacQuanTrong03 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào +Z++", icon='BACK')
+                thaoTacQuanTrong04 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào -Z--", icon='BACK')
+
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.+X++' 
+                
+
+                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.-Y--'
+                
+
+                thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.+Z++'
+                
+
+                thaoTacQuanTrong04.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.-Z--'
+                
+                col.scale_y = 1.5
+
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____ 
@@ -539,7 +608,7 @@ class VT_OT_CustomDialog(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self, width=250)
     
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
-#|||||_____|||||_____ 
+#|||||_____|||||_____  
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def draw_cmc_status(self, context):

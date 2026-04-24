@@ -1,5 +1,6 @@
 import bpy
 from . import hud
+from . import logic
 from .functions import transform_tools
 from .functions import mesh_tools
 from .functions import object_tools
@@ -551,4 +552,34 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
             
+        #####
+
+        if "FUNCTION.OBJECT.ARRANGE" in self.action:
+            print("FUNCTION.OBJECT.ARRANGE")
+
+            # Lấy danh sách object (theo thứ tự chọn là tốt nhất)
+            objs = context.selected_objects
+            cfg = context.scene.cmc_sorting_config
+            
+            if not objs:
+                self.report({'WARNING'}, "Chưa chọn Object nào cả!")
+                return {'CANCELLED'}
+
+            # Phân loại: Ngăn xếp Mới hay Tuần tự
+            # (Trong logic cơ bản, cả hai đều dùng arrange_objects_grid 
+            # nhưng bạn có thể thêm logic reset vị trí nếu là NEW_STACK)
+            
+            if "INTO_NEW_STACK" in self.action:
+                # Ví dụ: Có thể đưa về 3D Cursor trước khi xếp
+                # objs[0].location = context.scene.cursor.location
+                pass
+
+            # Gọi logic xử lý hướng (Lấy phần cuối của chuỗi action)
+            direction = self.action.split('.')[-1] 
+            logic.arrange_objects_grid(objs, cfg, direction)
+            
+            self.report({'INFO'}, f"Đã sắp xếp theo hướng {direction}")
+        
+    
+
         return {'FINISHED'}

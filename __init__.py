@@ -18,6 +18,7 @@ bl_info = {
 
 import bpy
 from . import constants, utils, operators, keymaps, hud
+from . import properties
 
 # Cơ chế Reload để phát triển (Giữ nguyên - rất tốt cho Dev)
 if "bpy" in locals():
@@ -35,6 +36,8 @@ classes = [
     utils.VT_OT_ShowMessage,       # Các tiện ích thông báo
     hud.VT_OT_CustomDialog,        # Hộp thoại Dashboard
     hud.VIEW3D_PT_VT_ObjectTools,  # Panel giao diện cuối cùng
+
+    properties.CMC_SortingConfig
 ]
 
 def register():
@@ -53,6 +56,10 @@ def register():
     
     # 5. Kích hoạt HUD (Vẽ GPU)
     utils.toggle_hud(True)
+
+    # Tạo một "con trỏ" (Pointer) trong Scene để chứa dữ liệu của bạn
+    # Đây chính là lúc cái tên "cmc_sorting_config" được tạo ra
+    bpy.types.Scene.cmc_sorting_config = bpy.props.PointerProperty(type=properties.CMC_SortingConfig)
 
     print("✅ Van Tan Tools đã được đăng ký!")
 
@@ -73,6 +80,9 @@ def unregister():
     if hasattr(bpy.types.Scene, "vt_ui"):
         del bpy.types.Scene.vt_ui
     
+    # Xóa con trỏ khi tắt Add-on
+    del bpy.types.Scene.cmc_sorting_config
+
     # 4. Gỡ đăng ký các class
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)

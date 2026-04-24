@@ -85,6 +85,12 @@ def make_root(context, force = False):
         # 4. RootObjectName
         obj["CMC_RootObjectName"] = ""
 
+        # 5. Thiết lập Kích thước
+        dims = utils.get_world_dimensions(obj)
+        obj["CMC_X_Width"] = dims.x
+        obj["CMC_Y_Depth"] = dims.y
+        obj["CMC_Z_Height"] = dims.z
+
         #
         id_ui = obj.id_properties_ui("CMC_Id")
         id_ui.update(
@@ -146,6 +152,12 @@ def make_reference(context):
 
         # 4. RootObjectName
         obj["CMC_RootObjectName"] = ""
+
+        # 5. Thiết lập Kích thước
+        dims = utils.get_world_dimensions(obj)
+        obj["CMC_X_Width"] = dims.x
+        obj["CMC_Y_Depth"] = dims.y
+        obj["CMC_Z_Height"] = dims.z
         
         # Cập nhật UI metadata
         id_ui = obj.id_properties_ui("CMC_Id")
@@ -196,7 +208,7 @@ def make_root_from_reference(context):
 
         # Chuẩn bị nội dung thông báo
         msg = [
-            "Tạo Bản Gốc Khoong Thành Công",
+            "Tạo Bản Gốc Không Thành Công",
             "Một trong hai Object chưa có ID",
             f"Bản Gốc:        [{active_obj['CMC_Id']}] - {active_obj.name}",
             f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
@@ -222,7 +234,7 @@ def make_root_from_reference(context):
 
         # Chuẩn bị nội dung thông báo
         msg = [
-            "Tạo Bản Gốc Khoong Thành Công",
+            "Tạo Bản Gốc Không Thành Công",
             "ID của hai Object không giống nhau. Không thể thiết lập liên kết Root",
             f"Bản Gốc:        [{active_obj['CMC_Id']}] - {active_obj.name}",
             f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
