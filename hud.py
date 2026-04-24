@@ -496,16 +496,35 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             cfg = context.scene.cmc_sorting_config
             
             settings_box = main_box.box()
-            settings_box.label(text="Cấu Hình Sắp Xếp:", icon='LINENUMBERS_ON')
+            settings_box.label(text="Config Sắp Xếp Trục Ngang (XY):", icon='LINENUMBERS_ON')
             
             row_settings = settings_box.row(align=True)
-            row_settings.prop(cfg, "spacing", text="Cách")
-            row_settings.prop(cfg, "max_per_row", text="Hàng")
-            row_settings.prop(cfg, "max_per_col", text="Cột")
+            row_settings.prop(cfg, "spacing_xy_axis", text="Cách")
+            row_settings.prop(cfg, "max_per_row_xy_axis", text="Hàng")
+            row_settings.prop(cfg, "max_per_col_xy_axis", text="Cột")
             
-            settings_box.prop(cfg, "align_to_bottom") # Option căn lề đáy
-            # ---------------------------
+            #####
 
+            settings_box2 = main_box.box()
+            settings_box2.label(text="Config Sắp Xếp Trục Dọc (Z):", icon='LINENUMBERS_ON')
+            
+            row_settings2 = settings_box2.row(align=True)
+            row_settings2.prop(cfg, "spacing_z_axis", text="Cách")
+            row_settings2.prop(cfg, "max_per_row_z_axis", text="Hàng")
+            row_settings2.prop(cfg, "max_per_col_z_axis", text="Cột")
+
+            #####
+
+            settings_box3 = main_box.box()
+            settings_box3.label(text="Config Sắp Xếp Lưới Đứng:", icon='LINENUMBERS_ON')
+            
+            row_settings3 = settings_box3.row(align=True)
+            row_settings3.prop(cfg, "spacing_standing_grid", text="Cách")
+            row_settings3.prop(cfg, "max_per_row_standing_grid", text="Hàng")
+            row_settings3.prop(cfg, "max_per_col_standing_grid", text="Cột")
+
+            # settings_box.prop(cfg, "align_to_bottom") # Option căn lề đáy
+            # ---------------------------
 
             sub_box = main_box.box()
             sub_row = sub_box.row(align=True)
@@ -536,30 +555,51 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
             #####
             
+
+            thisValue = False
+
+            if thisValue:
+                sub_box = main_box.box()
+                sub_row = sub_box.row(align=True)
+                
+                sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_into_new_stack_sub else 'DISCLOSURE_TRI_RIGHT'
+                sub_row.prop(ui, "show_into_new_stack_sub", text="Đẩy Vào Ngăn Xếp Mới", icon='LINENUMBERS_ON', emboss=False)
+                sub_row.label(text="", icon=sub_icon)
+                
+                if ui.show_into_new_stack_sub:
+                    col = sub_box.column(align=True)
+                    thaoTacQuanTrong01 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào +X++", icon='BACK')
+                    thaoTacQuanTrong02 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào -Y--", icon='BACK')
+                    thaoTacQuanTrong03 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào +Z++", icon='BACK')
+                    thaoTacQuanTrong04 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào -Z--", icon='BACK')
+
+                    thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.+X++' 
+                    
+
+                    thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.-Y--'
+                    
+
+                    thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.+Z++'
+                    
+
+                    thaoTacQuanTrong04.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.-Z--'
+                    
+                    col.scale_y = 1.5
+
+            #####
+            
             sub_box = main_box.box()
             sub_row = sub_box.row(align=True)
             
-            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_into_new_stack_sub else 'DISCLOSURE_TRI_RIGHT'
-            sub_row.prop(ui, "show_into_new_stack_sub", text="Đẩy Vào Ngăn Xếp Mới", icon='LINENUMBERS_ON', emboss=False)
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_rearrange_into_grid_sub else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_rearrange_into_grid_sub", text="Sắp Xếp Lưới", icon='LINENUMBERS_ON', emboss=False)
             sub_row.label(text="", icon=sub_icon)
             
-            if ui.show_into_new_stack_sub:
+            if ui.show_rearrange_into_grid_sub:
                 col = sub_box.column(align=True)
-                thaoTacQuanTrong01 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào +X++", icon='BACK')
-                thaoTacQuanTrong02 = col.operator("vt.object_action", text="(Hàng) Hướng đi vào -Y--", icon='BACK')
-                thaoTacQuanTrong03 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào +Z++", icon='BACK')
-                thaoTacQuanTrong04 = col.operator("vt.object_action", text="(Cột)  Hướng đi vào -Z--", icon='BACK')
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Xếp Thành Lưới Đứng", icon='BACK')
 
-                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.+X++' 
-                
-
-                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.-Y--'
-                
-
-                thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.+Z++'
-                
-
-                thaoTacQuanTrong04.action = 'FUNCTION.OBJECT.ARRANGE.INTO_NEW_STACK.-Z--'
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.ARRANGE.REARRANGE_INTO_GRID' 
                 
                 col.scale_y = 1.5
 

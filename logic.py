@@ -17,65 +17,183 @@ def get_world_dimensions(obj):
     
     return max_coords - min_coords
 
-def arrange_objects_grid(obj_list, config, direction='X++'):
+
+def arrange_objects_grid(context, config, direction='X++'):
     """
-    Sắp xếp các object theo dạng lưới 3D thông minh.
+    Sắp xếp các object theo dạng lưới 3D thông minh (Cố định bước nhảy).
     """
-    if not obj_list:
+
+    active_obj = context.active_object
+    selected_objs = context.selected_objects
+
+    if not active_obj or len(selected_objs) < 2:
         return
 
-    print(f"{direction}")
+    # TẠO DANH SÁCH MỚI: Đưa Active Object lên đầu, các cái còn lại xếp sau
+    objs = [active_obj]
+    for obj in selected_objs:
+        if obj != active_obj:
+            objs.append(obj)
+
+    # ----------
+    # ---------- || ----------
+    # ---------- || ---------- || ----------
+    #  ĐÁNH DẤU OBJECT NEO - Start
+    # Tắt hiển thị tên của tất cả object cũ để tránh rối
+    for o in bpy.data.objects:
+        o.show_name = False
+
+    # Bật hiển thị tên và highlight cho object neo (số 1)
+    anchor_obj = objs[0]
+    anchor_obj.show_name = True 
+    # Bạn có thể đổi tên tạm thời để nó hiện chữ "NEO" thay vì tên gốc
+    # anchor_obj.name = "NEO_" + anchor_obj.name 
+    
+    # Đổi màu Object Neo (RGBA)
+    anchor_obj.color = (0.5, 0.9, 0.5, 1.0) 
+    # Kích hoạt chế độ hiển thị màu Object trong Viewport (nếu chưa bật)
+    for area in bpy.context.screen.areas:
+        if area.type == 'VIEW_3D':
+            for space in area.spaces:
+                if space.type == 'VIEW_3D':
+                    space.shading.color_type = 'OBJECT'
+
+
+    #  ĐÁNH DẤU OBJECT NEO - Finish
+    # ---------------------------
+    # ---------- || ---------- || ----------
+    # ---------- || ----------
+    # ----------
+
+    print(f"Bắt đầu sắp xếp hướng: {direction}")
 
     # Lấy object đầu tiên làm mốc vị trí (Gốc của ngăn xếp) 
-    origin_loc = Vector(obj_list[0].location)
+    origin_loc = Vector(objs[0].location)
     
-    # Biến lưu trữ kích thước lớn nhất của từng hàng/cột để tránh đè lên nhau
-    # (Hữu ích khi các object có kích thước không đồng đều)
+    # Tính toán kích thước lớn nhất để làm "ô lưới"
     max_dims = Vector((0, 0, 0))
-    for obj in obj_list:
+    for obj in objs:
         d = get_world_dimensions(obj)
         if d.x > max_dims.x: max_dims.x = d.x
         if d.y > max_dims.y: max_dims.y = d.y
         if d.z > max_dims.z: max_dims.z = d.z
 
-    # Khoảng cách bước nhảy (Kích thước lớn nhất + Padding)
+    # Khoảng cách bước nhảy
     step_x = max_dims.x + config.spacing
     step_y = max_dims.y + config.spacing
     step_z = max_dims.z + config.spacing
 
-    for i, obj in enumerate(obj_list):
-        if i == 0: continue # Giữ nguyên vị trí object đầu tiên
-        
-        # Tính toán tọa độ lưới (Grid Coordinates)
-        # Giả sử chúng ta ưu tiên lấp đầy Hàng (X) -> Cột (Y) -> Tầng (Z)
-        grid_x = i % config.max_per_row
-        grid_y = (i // config.max_per_row) % config.max_per_col
-        grid_z = i // (config.max_per_row * config.max_per_col)
-        
-        offset = Vector((0, 0, 0))
+    if direction == '+X++' or direction == '-Y--':
 
-        # Áp dụng hướng di chuyển dựa trên direction
-        if direction == '+X++':
-            offset.x = grid_x * step_x
-            offset.y = -grid_y * step_y # -Y-- theo giao diện của bạn
-            offset.z = grid_z * step_z
-            print("Áp dụng hướng di chuyển +X++")
+        # Khoảng cách bước nhảy
+        step_x = max_dims.x + config.spacing_xy_axis
+        step_y = max_dims.y + config.spacing_xy_axis
+        step_z = max_dims.z + config.spacing_xy_axis
+
+        for i, obj in enumerate(objs):
+            if i == 0: continue # Giữ nguyên vị trí object đầu tiên
             
-        elif direction == '-Y--':
-            offset.y = -grid_x * step_y
-            offset.x = grid_y * step_x
-            offset.z = grid_z * step_z
-            print("Áp dụng hướng di chuyển -Y--")
+            # Tọa độ lưới dựa trên số lượng tối đa
+            grid_primary = i % config.max_per_row_xy_axis
+            grid_secondary = (i // config.max_per_row_xy_axis) % config.max_per_col_xy_axis
+            grid_tertiary = i // (config.max_per_row_xy_axis * config.max_per_col_xy_axis)
+            
+            offset = Vector((0, 0, 0))
 
-        # Cập nhật vị trí mới 
-        obj.location = origin_loc + offset
+            # --- PHÂN TÍCH HƯỚNG ---
+            if direction == '+X++':
+                offset.x = grid_primary * step_x
+                offset.y = -grid_secondary * step_y # Ưu tiên hàng X, cột lùi Y-
+                offset.z = grid_tertiary * step_z   # Tầng cao Z+
+                
+            elif direction == '-Y--':
+                offset.y = -grid_primary * step_y   # Ưu tiên lùi Y-
+                offset.x = grid_secondary * step_x  # Cột tiến X+
+                offset.z = grid_tertiary * step_z   # Tầng cao Z+ 
 
-        print(f"{obj.location.x}x{obj.location.y}x{obj.location.z}")
+            # Áp dụng vị trí
+            obj.location = origin_loc + offset
 
-        # Căn lề đáy (Align to bottom) nếu config yêu cầu
-        if config.align_to_bottom:
-            current_dims = get_world_dimensions(obj)
-            # Đẩy object lên một khoảng bằng nửa chiều cao của nó để "chạm sàn"
-            # (Lưu ý: Cách này giả định Origin nằm ở tâm hình học)
-            # Nếu origin ở đáy sẵn thì không cần dòng này.
-            pass
+            # Căn lề đáy (Align to bottom)
+            if config.align_to_bottom:
+                current_dims = get_world_dimensions(obj)
+                # Nếu origin ở giữa, ta phải bù trừ để đáy các object nằm trên cùng mặt phẳng
+                # Object đầu tiên là mốc, nên ta căn theo vị trí tương đối của nó
+                # (Phần này bạn có thể viết thêm tùy vào vị trí Origin thực tế của Model)
+                pass
+
+            print(f"Object {obj.name}: {obj.location}")
+
+    elif direction == '+Z++' or direction == '-Z--':
+        # Khoảng cách bước nhảy
+        step_x = max_dims.x + config.spacing_z_axis
+        step_y = max_dims.y + config.spacing_z_axis
+        step_z = max_dims.z + config.spacing_z_axis
+
+        for i, obj in enumerate(objs):
+            if i == 0: continue # Giữ nguyên vị trí object đầu tiên
+            
+            # Tọa độ lưới dựa trên số lượng tối đa
+            grid_primary = i % config.max_per_row_z_axis
+            grid_secondary = (i // config.max_per_row_z_axis) % config.max_per_col_z_axis
+            grid_tertiary = i // (config.max_per_row_z_axis * config.max_per_col_z_axis)
+            
+            offset = Vector((0, 0, 0))
+
+            # --- PHÂN TÍCH HƯỚNG ---
+            if direction == '+Z++':
+                offset.z = grid_primary * step_z    # Ưu tiên chồng cao Z+
+                offset.x = grid_secondary * step_x  # Hàng tiến X+
+                offset.y = -grid_tertiary * step_y  # Cột lùi Y-
+
+            elif direction == '-Z--':
+                offset.z = -grid_primary * step_z   # Ưu tiên hạ thấp Z-
+                offset.x = grid_secondary * step_x  # Hàng tiến X+
+                offset.y = -grid_tertiary * step_y  # Cột lùi Y-
+
+            # Áp dụng vị trí
+            obj.location = origin_loc + offset
+
+            # Căn lề đáy (Align to bottom)
+            if config.align_to_bottom:
+                current_dims = get_world_dimensions(obj)
+                # Nếu origin ở giữa, ta phải bù trừ để đáy các object nằm trên cùng mặt phẳng
+                # Object đầu tiên là mốc, nên ta căn theo vị trí tương đối của nó
+                # (Phần này bạn có thể viết thêm tùy vào vị trí Origin thực tế của Model)
+                pass
+ 
+            print(f"Object {obj.name}: {obj.location}")
+
+    # Sắp Xếp Thành Lưới Đứng
+    elif direction == 'REARRANGE_INTO_GRID':
+        # Khoảng cách bước nhảy
+        step_x = max_dims.x + config.spacing_standing_grid
+        step_y = max_dims.y + config.spacing_standing_grid
+        step_z = max_dims.z + config.spacing_standing_grid
+
+        for i, obj in enumerate(objs):
+            if i == 0: continue # Giữ nguyên vị trí object đầu tiên 
+            
+            # Tọa độ lưới dựa trên số lượng tối đa 
+            # grid_primary = i % config.max_per_row_standing_grid
+            # grid_secondary = (i // config.max_per_row_standing_grid) % config.max_per_col_standing_grid
+            # grid_tertiary = i // (config.max_per_row_standing_grid * config.max_per_col_standing_grid)
+            
+            offset = Vector((0, 0, 0))
+
+            # --- PHÂN TÍCH HƯỚNG ---
+            # 1. Trái qua Phải (Trục X dương)
+            offset.x = (i % config.max_per_row_standing_grid) * step_x
+            
+            # 2. Trên xuống Dưới (Trục Z âm)
+            # Dùng max_per_row để biết khi nào thì "xuống hàng"
+            offset.z = -(i // config.max_per_row_standing_grid) * step_z
+            
+            # 3. Nếu muốn có thêm chiều sâu (độ dày của khối lưới)
+            # Ta dùng max_per_col để biết khi nào nhảy sang lớp Y mới
+            offset.y = -(i // (config.max_per_row_standing_grid * config.max_per_col_standing_grid)) * step_y
+            
+            print("Áp dụng hệ lưới đứng: Trái -> Phải, Trên -> Xuống")
+
+            # Áp dụng vị trí
+            obj.location = origin_loc + offset

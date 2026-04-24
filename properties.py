@@ -10,18 +10,75 @@ class CMC_SortingConfig(bpy.types.PropertyGroup):
         unit='LENGTH'
     ) # type: ignore
 
+
     # --- PHẦN LOGIC LƯỚI (GRID) ---
-    max_per_row: bpy.props.IntProperty(
+    
+    # TRỤC NGANG
+    spacing_xy_axis: bpy.props.FloatProperty(
+        name="Khoảng Cách", 
+        description="Khoảng cách giữa các bề mặt object",
+        default=0.1, 
+        min=0.0,
+        unit='LENGTH'
+    ) # type: ignore
+
+    max_per_row_xy_axis: bpy.props.IntProperty(
         name="Max Hàng", 
         description="Số lượng object tối đa trên một hàng trước khi nhảy cột/tầng",
         default=5, 
         min=1
     ) # type: ignore
     
-    max_per_col: bpy.props.IntProperty(
+    max_per_col_xy_axis: bpy.props.IntProperty(
         name="Max Cột", 
         description="Số lượng hàng tối đa trước khi nhảy tầng (Z)",
         default=5, 
+        min=1
+    ) # type: ignore
+
+    # TRỤC ĐỨNG
+    spacing_z_axis: bpy.props.FloatProperty(
+        name="Khoảng Cách", 
+        description="Khoảng cách giữa các bề mặt object",
+        default=0.1, 
+        min=0.0,
+        unit='LENGTH'
+    ) # type: ignore
+
+    max_per_row_z_axis: bpy.props.IntProperty(
+        name="Max Hàng", 
+        description="Số lượng object tối đa trên một hàng trước khi nhảy cột/tầng",
+        default=5, 
+        min=1
+    ) # type: ignore
+    
+    max_per_col_z_axis: bpy.props.IntProperty(
+        name="Max Cột", 
+        description="Số lượng hàng tối đa trước khi nhảy tầng (Z)",
+        default=5, 
+        min=1
+    ) # type: ignore
+
+    # LƯỚI ĐỨNG - StandingGrid
+    spacing_standing_grid: bpy.props.FloatProperty(
+        name="Khoảng Cách", 
+        description="Khoảng cách giữa các bề mặt object",
+        default=0.1, 
+        min=0.0,
+        unit='LENGTH'
+    ) # type: ignore
+
+    max_per_row_standing_grid: bpy.props.IntProperty(
+        name="Max Hàng", 
+        description="Số lượng object tối đa trên một hàng trước khi nhảy cột/tầng",
+        default=10, 
+        min=1
+    ) # type: ignore
+    
+    max_per_col_standing_grid: bpy.props.IntProperty(
+        name="Max Cột", 
+        description="Số lượng hàng tối đa trước khi nhảy tầng (Z)",
+        default=10, 
         min=1
     ) # type: ignore
 

@@ -468,6 +468,7 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
     bl_idname = "vt.object_action"
     bl_label = "Object Action"
     bl_description = "Execute CMC Object System functions"
+    bl_options = {'REGISTER', 'UNDO'}
     
     # Nhận tham số để biết cần gọi hàm nào
     action : bpy.props.StringProperty() # type: ignore
@@ -558,11 +559,13 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             print("FUNCTION.OBJECT.ARRANGE")
 
             # Lấy danh sách object (theo thứ tự chọn là tốt nhất)
-            objs = context.selected_objects
             cfg = context.scene.cmc_sorting_config
             
-            if not objs:
-                self.report({'WARNING'}, "Chưa chọn Object nào cả!")
+            active_obj = context.active_object
+            selected_objs = context.selected_objects
+
+            if not active_obj or len(selected_objs) < 2:
+                self.report({'WARNING'}, "Cần chọn ít nhất 2 object và có 1 cái Active!")
                 return {'CANCELLED'}
 
             # Phân loại: Ngăn xếp Mới hay Tuần tự
@@ -576,7 +579,7 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
 
             # Gọi logic xử lý hướng (Lấy phần cuối của chuỗi action)
             direction = self.action.split('.')[-1] 
-            logic.arrange_objects_grid(objs, cfg, direction)
+            logic.arrange_objects_grid(context, cfg, direction)
             
             self.report({'INFO'}, f"Đã sắp xếp theo hướng {direction}")
         

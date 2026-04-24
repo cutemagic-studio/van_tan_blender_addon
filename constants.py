@@ -148,6 +148,8 @@ class VT_UI_Settings(bpy.types.PropertyGroup):
     # Sắp xếp lại theo hình thức lưới Ngang/Dọc
     show_rearrange_into_grid_sub : bpy.props.BoolProperty(name="show_rearrange_into_grid_sub", default=False) # type: ignore
 
+
+
 def register():
     bpy.utils.register_class(VT_UI_Settings)
     bpy.types.Scene.vt_ui = bpy.props.PointerProperty(type=VT_UI_Settings)
