@@ -522,6 +522,13 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
 
+        elif self.action == 'FUNCTION.OBJECT.CLEAR_OBJECT_DATA':
+            success = object_tools.clear_object_data(context)
+            if success:
+                self.report({'INFO'}, "✅ Xóa Dữ Liệu Object Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
         #####
 
         elif self.action == 'FUNCTION.OBJECT.SYNC_ROOT_OBJECT':

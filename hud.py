@@ -431,8 +431,14 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 col.operator("vt.object_action", text="Tạo Bản Tham Chiếu", icon='RESTRICT_SELECT_OFF').action = 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT'
                 col.scale_y = 1.2
 
+            if ui.show_identity_sub:
+                col = sub_box.column(align=True)
+                # col.separator()
+                col.operator("vt.object_action", text="Xóa Dữ Liệu Object", icon='TRASH').action = 'FUNCTION.OBJECT.CLEAR_OBJECT_DATA'
+                col.scale_y = 0.8
 
-            # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) ---
+
+            # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) --- 
             sub_box = main_box.box()
             sub_row = sub_box.row(align=True)
             

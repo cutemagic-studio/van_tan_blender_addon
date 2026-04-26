@@ -170,6 +170,64 @@ def make_root(context, force = False):
     return True
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ 
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def clear_object_data(context):
+
+    obj = context.active_object
+
+    if obj:
+        # Lấy danh sách các key (tên thuộc tính)
+        # Cần ép kiểu list() vì nếu xóa trực tiếp khi đang lặp sẽ bị lỗi logic
+        keys = list(obj.keys())
+        
+        for key in keys:
+            # Bỏ qua các thuộc tính hệ thống của Blender (thường bắt đầu bằng '_')
+            # hoặc các thuộc tính đặc biệt như '_RNA_UI'
+            del obj[key]
+            
+        print(f"✅ Đã xóa sạch Custom Properties của {obj.name}")
+
+        # ----------
+        # ----------
+        # THÔNG BÁO - Start
+
+        # Chuẩn bị nội dung thông báo
+        msg = [
+            f"Clear Data Của Object {obj.name} Thành Công",
+        ]
+        # Gọi hàm hiển thị Popup nổi bật
+        utils.show_detailed_message(msg, title="Thành Công Không Có Gì Sai!", icon='CHECKMARK')
+
+        # THÔNG BÁO _ Finish
+        # ----------
+        # ----------  
+
+        # ----------
+        # ----------
+        # Cập nhật HUD - Start
+        utils.refresh_hud_data(obj, op_name="CLEAR DATA")
+        # Cập nhật HUD - Finish
+        # ----------
+        # ----------
+
+        return True
+    else:
+        msg = [
+                f"Chưa Chọn Bất Kỳ Object Nào Trong Scene Để Clear Data!",
+            ]
+        # Gọi hàm hiển thị Popup nổi bật
+        utils.show_detailed_message(msg, title="Có Gì Đó Xảy Ra!", icon='ERROR')
+
+        # THÔNG BÁO _ Finish
+        # ----------
+        # ---------- 
+        return False
+
+
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____ Đồng bộ hóa dữ liệu Object
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
