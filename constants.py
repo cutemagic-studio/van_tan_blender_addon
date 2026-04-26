@@ -148,7 +148,8 @@ class VT_UI_Settings(bpy.types.PropertyGroup):
     # Sắp xếp lại theo hình thức lưới Ngang/Dọc
     show_rearrange_into_grid_sub : bpy.props.BoolProperty(name="show_rearrange_into_grid_sub", default=False) # type: ignore
 
-
+    # Export All FBX
+    show_export_all_object_to_fbx : bpy.props.BoolProperty(name="show_export_all_object_to_fbx", default=False) # type: ignore
 
 def register():
     bpy.utils.register_class(VT_UI_Settings)

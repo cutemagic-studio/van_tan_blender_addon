@@ -492,7 +492,7 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
 
     def execute(self, context):
 
-        ##### 
+        #####  
 
         if self.action == 'FUNCTION.OBJECT.MAKE_ROOT':
             success = object_tools.make_root(context)
@@ -578,6 +578,13 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             success = object_tools.export_position_data_to_json(context)
             if success:
                 self.report({'INFO'}, "✅ Xuất Dữ Liệu Vị Trí Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.EXPORT_ALL_OBJECT_TO_FBX':
+            success = object_tools.export_all_object_to_fbx(context)
+            if success:
+                self.report({'INFO'}, "✅ Xuất Dữ Liệu FBX Thành Công!")
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
             

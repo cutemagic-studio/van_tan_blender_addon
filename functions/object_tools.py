@@ -4,6 +4,8 @@ import json
 import os
 from .. import utils
 from .. import logic
+import mathutils
+from mathutils import Vector
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
@@ -751,7 +753,7 @@ def sync_root_instance(root_object):
 
     # Duyệt Qua Danh Sách Object Tham Chiếu Để Đồng Bộ
     for reference_object in reference_object_list:
-        if reference_object["CMC_RootObjectId"] == root_object["CMC_Id"]:
+        if reference_object.get("CMC_RootObjectId", -1) == root_object.get("CMC_Id"):
             sync_reference_instance(reference_object, root_object)
 
     return True
@@ -842,7 +844,7 @@ def sync_position(context):
     lastest_create_object = None
     if len(root_object_list) > 0:
         for r_object in root_object_list:
-            if r_object["CMC_IsLastestCreate"] == True:
+            if r_object.get("CMC_IsLastestCreate", False) == True:
                 lastest_create_object = r_object
                 break
         
@@ -932,8 +934,30 @@ def export_position_data_to_json(context):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     selected_objects = context.selected_objects
-    if not selected_objects: 
-        return False, 0
+    
+    if not selected_objects:
+        print("Không có object nào được chọn để export.")
+
+        # Lấy toàn bộ object thuộc về Scene mà bạn đang mở
+        selected_objects = bpy.context.scene.objects
+        print("Đã Chọn Toàn Bộ Object Trong Scene Để Export.")
+
+        if len(selected_objects) == 0:
+            # ----------
+            # ----------
+            # THÔNG BÁO - Start
+
+            # Chuẩn bị nội dung thông báo
+            msg = [
+                f"Không Có Bất Kỳ Object Nào Trong Scene Để Export!",
+            ]
+            # Gọi hàm hiển thị Popup nổi bật
+            utils.show_detailed_message(msg, title="Có Gì Đó Xảy Ra!", icon='ERROR')
+
+            # THÔNG BÁO _ Finish
+            # ----------
+            # ---------- 
+            return False
 
     data = []
     # for obj in selected_objects:
@@ -1005,6 +1029,22 @@ def export_position_data_to_json(context):
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
         print(f"✅ Đã xuất {len(data)} đối tượng sang JSON tại: {output_path}")
+        
+        # ----------
+        # ----------
+        # THÔNG BÁO - Start
+
+        # Chuẩn bị nội dung thông báo
+        msg = [
+            f"Export Thành Công Dữ Liệu Vị Trí Của {len(selected_objects)} Object]",
+        ]
+        # Gọi hàm hiển thị Popup nổi bật
+        utils.show_detailed_message(msg, title="Thành Công Không Có Gì Sai!", icon='CHECKMARK')
+
+        # THÔNG BÁO _ Finish
+        # ----------
+        # ----------
+        
         return True, len(data)
     except Exception as e:
         print(f"❌ Lỗi khi xuất file: {e}")
@@ -1059,3 +1099,108 @@ def rename_with_smart_suffix(context):
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
+def export_all_object_to_fbx(context, export_folder="G:/Blender_Export_Data_Json/"):
+    # Đảm bảo thư mục tồn tại
+    if not os.path.exists(export_folder):
+        os.makedirs(export_folder)
+
+    # Lấy danh sách object đang chọn (để linh hoạt hơn là quét cả scene)
+    selected_objs = context.selected_objects[:]
+    
+    if not selected_objs:
+        print("Không có object nào được chọn để export.")
+
+        # Lấy toàn bộ object thuộc về Scene mà bạn đang mở
+        selected_objs = bpy.context.scene.objects
+        print("Đã Chọn Toàn Bộ Object Trong Scene Để Export.")
+
+        if len(selected_objs) == 0:
+            # ----------
+            # ----------
+            # THÔNG BÁO - Start
+
+            # Chuẩn bị nội dung thông báo
+            msg = [
+                f"Không Có Bất Kỳ Object Nào Trong Scene Để Export!",
+            ]
+            # Gọi hàm hiển thị Popup nổi bật
+            utils.show_detailed_message(msg, title="Có Gì Đó Xảy Ra!", icon='ERROR')
+
+            # THÔNG BÁO _ Finish
+            # ----------
+            # ---------- 
+            return False
+
+    # Lưu lại Cursor hoặc Mode nếu cần, nhưng ở đây ta xử lý trực tiếp
+    for obj in selected_objs:
+        if obj.type != 'MESH':
+            continue
+
+        # Active và Select duy nhất object này để ops hoạt động chuẩn
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        context.view_layer.objects.active = obj
+
+        # 1. Apply transform (Nướng tọa độ vào mesh)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+        # 2. Tính toán offset để đưa Pivot về đáy (Bottom Center)
+        mesh = obj.data
+        verts = [v.co for v in mesh.vertices]
+
+        min_z = min(v.z for v in verts)
+        min_x = min(v.x for v in verts)
+        max_x = max(v.x for v in verts)
+        min_y = min(v.y for v in verts)
+        max_y = max(v.y for v in verts)
+
+        center_x = (min_x + max_x) / 2
+        center_y = (min_y + max_y) / 2
+
+        offset = Vector((center_x, center_y, min_z))
+
+        # 3. Di chuyển các đỉnh của Mesh ngược lại offset (Edit mode ảo)
+        for v in mesh.vertices:
+            v.co -= offset
+        
+        mesh.update()
+
+        # 4. Đưa Object về gốc tọa độ World (để file FBX sạch sẽ khi vào Unity)
+        obj.location = (0, 0, 0)
+
+        # 5. Thực hiện Export FBX
+        # Sử dụng tên object làm tên file, rsplit để bỏ đuôi .001 nếu có
+        clean_name = obj.name.rsplit('.', 1)[0]
+        filepath = os.path.join(export_folder, f"{clean_name}.fbx")
+
+        bpy.ops.export_scene.fbx(
+            filepath=filepath,
+            use_selection=True,
+            axis_forward='-Z',
+            axis_up='Y',
+            apply_unit_scale=True,
+            apply_scale_options='FBX_SCALE_ALL',
+            bake_space_transform=True # Tương đương "Apply Transform" trong UI
+        )
+
+    # ----------
+    # ----------
+    # THÔNG BÁO - Start
+
+    # Chuẩn bị nội dung thông báo
+    msg = [
+        f"Export Thành Công {len(selected_objs)} File FBX]",
+    ]
+    # Gọi hàm hiển thị Popup nổi bật
+    utils.show_detailed_message(msg, title="Thành Công Không Có Gì Sai!", icon='CHECKMARK')
+
+    # THÔNG BÁO _ Finish
+    # ----------
+    # ----------    
+
+    print(f"DONE EXPORT: {len(selected_objs)} files in {export_folder}")
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____

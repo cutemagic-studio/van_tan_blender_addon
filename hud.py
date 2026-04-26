@@ -482,21 +482,21 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 col.scale_y = 1.5
 
             # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) ---
-            sub_box = main_box.box()
-            sub_row = sub_box.row(align=True)
+            # sub_box = main_box.box()
+            # sub_row = sub_box.row(align=True)
             
-            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_export_sub else 'DISCLOSURE_TRI_RIGHT'
-            sub_row.prop(ui, "show_export_sub", text="Xuất Dữ Liệu", icon='EXPORT', emboss=False)
-            sub_row.label(text="", icon=sub_icon)
+            # sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_export_sub else 'DISCLOSURE_TRI_RIGHT'
+            # sub_row.prop(ui, "show_export_sub", text="Xuất Dữ Liệu", icon='EXPORT', emboss=False)
+            # sub_row.label(text="", icon=sub_icon)
              
-            if ui.show_export_sub:
-                col = sub_box.column(align=True)
+            # if ui.show_export_sub:
+            #     col = sub_box.column(align=True)
 
-                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Vị Trí Trong Scene", icon='OUTLINER_COLLECTION')
-                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.EXPORT_POSITION_DATA_TO_JSON'
-                col.scale_y = 1.5
+            #     thaoTacQuanTrong01 = col.operator("vt.object_action", text="Vị Trí Trong Scene", icon='OUTLINER_COLLECTION')
+            #     thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.EXPORT_POSITION_DATA_TO_JSON'
+            #     col.scale_y = 1.5
 
-                col.separator()
+            #     col.separator()
 
         # LEVEL 1:
         # =========================================================================
@@ -509,7 +509,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
         
         #
         util_icon = 'TRIA_DOWN' if ui.show_arrange_group else 'TRIA_RIGHT'
-        row.prop(ui, "show_arrange_group", text="SẮP XẾP TỐI THƯỢNG", icon='COLLAPSEMENU', emboss=False)
+        row.prop(ui, "show_arrange_group", text="SẮP XẾP VÀ EXPORT", icon='COLLAPSEMENU', emboss=False)
         row.label(text="", icon=util_icon)
         
         if ui.show_arrange_group:
@@ -623,6 +623,29 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
                 thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.ARRANGE.REARRANGE_INTO_GRID' 
                 
+                col.scale_y = 1.5
+
+            #####
+            
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_export_all_object_to_fbx else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_export_all_object_to_fbx", text="Export", icon='EXPORT', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_export_all_object_to_fbx:
+
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Export Dữ Liệu Vị Trí Trong Scene", icon='EXPORT')
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.EXPORT_POSITION_DATA_TO_JSON'
+                col.scale_y = 1.5
+
+                col.separator()
+
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Export Tất Cả Object Sang Fbx", icon='EXPORT')
+                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.EXPORT_ALL_OBJECT_TO_FBX' 
                 col.scale_y = 1.5
 
 
