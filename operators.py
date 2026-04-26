@@ -516,7 +516,7 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
 
         elif self.action == 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT':
-            success = object_tools.make_reference(context)
+            success = object_tools.make_reference_from_root(context)
             if success:
                 self.report({'INFO'}, "✅ Tạo Bản Tham Chiếu Thành Công!")
             else:
@@ -542,6 +542,20 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             success = object_tools.sync_position_data(context)
             if success:
                 self.report({'INFO'}, "✅ Đồng Bộ Hóa Dữ Liệu Vị Trí Thành Công! (Danh Sách Chọn)")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.SYNC_OBJECT_NAME':
+            success = object_tools.rename_with_smart_suffix(context)
+            if success:
+                self.report({'INFO'}, "✅ Đồng Bộ Hóa Tên Thành Công! (Danh Sách Chọn)")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.SYNC_ALL_DATA':
+            success = object_tools.sync_all_data(context)
+            if success:
+                self.report({'INFO'}, "✅ Đồng Bộ Hóa Dữ Liệu Thành Công!")
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
 

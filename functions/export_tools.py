@@ -23,12 +23,22 @@ def export_positions_to_json(context):
         # 1. Lấy tọa độ World Space
         pos = obj.matrix_world.translation
         
+        rotation_X = obj.get("CMC_Rotation_X", 0)
+        rotation_Y = obj.get("CMC_Rotation_Y", 0)
+        rotation_Z = obj.get("CMC_Rotation_Z", 0)
+        rotation_Scalar_Part = obj.get("CMC_Rotation_Scalar_Part", 0)
+
         # 2. Thu thập dữ liệu Custom Properties (với giá trị mặc định nếu thiếu)
         custom_props = {
             "CMC_Id": obj.get("CMC_Id", -1),
             "CMC_IsRootObject": bool(obj.get("CMC_IsRootObject", False)),
             "CMC_RootObjectId": obj.get("CMC_RootObjectId", -1),
-            "CMC_RootObjectName": obj.get("CMC_RootObjectName", "")
+            "CMC_RootObjectName": obj.get("CMC_RootObjectName", ""),
+
+            "CMC_Rotation_X" : obj.get("CMC_Rotation_X", 0),
+            "CMC_Rotation_Y" : obj.get("CMC_Rotation_Y", 0),
+            "CMC_Rotation_Z" : obj.get("CMC_Rotation_Z", 0),
+            "CMC_Rotation_Scalar_Part" : obj.get("CMC_Rotation_Scalar_Part", 0),
         }
 
         # 3. Đóng gói dữ liệu
@@ -39,6 +49,12 @@ def export_positions_to_json(context):
                 "x": pos.x * (-1),
                 "y": pos.z,
                 "z": pos.y * (-1)
+            },
+            "rotation": {
+                "x": rotation_X,
+                "y": rotation_Z,
+                "z": rotation_Y,
+                "w": rotation_Scalar_Part * (-1)
             },
             # Đưa toàn bộ metadata vào mục "properties"
             "properties": custom_props

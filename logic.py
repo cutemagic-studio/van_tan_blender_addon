@@ -1,5 +1,6 @@
 import bpy
 from mathutils import Vector
+from .functions import object_tools
 
 def get_world_dimensions(obj):
     """Lấy kích thước thực tế của Object trong World Space"""
@@ -18,7 +19,7 @@ def get_world_dimensions(obj):
     return max_coords - min_coords
 
 
-def arrange_objects_grid(context, config, direction='X++'):
+def arrange_objects_grid(context, config, direction='X++', is_make_lastest_create = False):
     """
     Sắp xếp các object theo dạng lưới 3D thông minh (Cố định bước nhảy).
     """
@@ -123,6 +124,9 @@ def arrange_objects_grid(context, config, direction='X++'):
                 pass
 
             print(f"Object {obj.name}: {obj.location}")
+
+            if is_make_lastest_create == True and i == (len(objs) - 1):
+                obj["CMC_IsLastestCreate"] = True
 
     elif direction == '+Z++' or direction == '-Z--':
         # Khoảng cách bước nhảy

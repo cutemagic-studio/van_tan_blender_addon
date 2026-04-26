@@ -83,6 +83,13 @@ public class PositionImporter_2 : MonoBehaviour
                 // Tính toán vị trí
                 Vector3 spawnPos = new Vector3(item.pos.x, item.pos.y, item.pos.z);
 
+                // Tính toán xoay
+                Quaternion spawnRotation = new Quaternion(
+                    item.rotation.x, 
+                    item.rotation.y, 
+                    item.rotation.z, 
+                    item.rotation.w);
+
                 // Spawn Prefab
                 //GameObject newObj = Instantiate(prefab, spawnPos, Quaternion.identity);
                 GameObject newObj;

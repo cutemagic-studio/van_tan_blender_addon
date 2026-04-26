@@ -459,6 +459,18 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.SYNC_OBJECT_POSITION_DATA'
                 col.scale_y = 1.5
 
+                col.separator()
+
+                thaoTacQuanTrong04 = col.operator("vt.object_action", text="Đồng Bộ Tên", icon='ORIENTATION_GIMBAL')
+                thaoTacQuanTrong04.action = 'FUNCTION.OBJECT.SYNC_OBJECT_NAME'
+                col.scale_y = 1.5
+
+                col.separator()
+
+                thaoTacQuanTrong05 = col.operator("vt.object_action", text="Đồng Bộ Tất Cả", icon='FILE_REFRESH')
+                thaoTacQuanTrong05.action = 'FUNCTION.OBJECT.SYNC_ALL_DATA'
+                col.scale_y = 1.5
+
             # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) ---
             sub_box = main_box.box()
             sub_row = sub_box.row(align=True)

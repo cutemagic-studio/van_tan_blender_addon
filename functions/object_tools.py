@@ -3,6 +3,7 @@ import time
 import json
 import os
 from .. import utils
+from .. import logic
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
@@ -85,11 +86,11 @@ def make_root(context, force = False):
         # 4. RootObjectName
         obj["CMC_RootObjectName"] = ""
 
-        # 5. Thiết lập Kích thước
-        dims = utils.get_world_dimensions(obj)
-        obj["CMC_X_Width"] = dims.x
-        obj["CMC_Y_Depth"] = dims.y
-        obj["CMC_Z_Height"] = dims.z
+        # 5. Đồng bộ hóa dữ liệu Object
+        sync_object_data(context, obj)
+
+        # 6. 
+        obj["CMC_IsLastestCreate"] = False
 
         #
         id_ui = obj.id_properties_ui("CMC_Id")
@@ -130,6 +131,30 @@ def make_root(context, force = False):
     return True
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ Đồng bộ hóa dữ liệu Object
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def sync_object_data(context, obj):
+    dims = utils.get_world_dimensions(obj)
+    obj["CMC_Width"] = dims.x
+    obj["CMC_Depth"] = dims.y
+    obj["CMC_Height"] = dims.z
+
+    # Lấy Quaternion từ ma trận thế giới
+    objQuaternionRotation = obj.matrix_world.to_quaternion()
+    obj["CMC_Rotation_X"] = objQuaternionRotation.x
+    obj["CMC_Rotation_Y"] = objQuaternionRotation.y
+    obj["CMC_Rotation_Z"] = objQuaternionRotation.z
+    obj["CMC_Rotation_Scalar_Part"] = objQuaternionRotation.w
+
+    objPosition = obj.matrix_world.translation
+    obj["CMC_Transform_X"] = objPosition.x
+    obj["CMC_Transform_Y"] = objPosition.y
+    obj["CMC_Transform_Z"] = objPosition.z
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
@@ -153,11 +178,11 @@ def make_reference(context):
         # 4. RootObjectName
         obj["CMC_RootObjectName"] = ""
 
-        # 5. Thiết lập Kích thước
-        dims = utils.get_world_dimensions(obj)
-        obj["CMC_X_Width"] = dims.x
-        obj["CMC_Y_Depth"] = dims.y
-        obj["CMC_Z_Height"] = dims.z
+        # 5. Đồng bộ hóa dữ liệu Object
+        sync_object_data(context, obj)
+
+        # 6.
+        obj["CMC_IsLastestCreate"] = False
         
         # Cập nhật UI metadata
         id_ui = obj.id_properties_ui("CMC_Id")
@@ -179,6 +204,84 @@ def make_reference(context):
     # ---------- 
 
     print(f"✅ Đã thực hiện MakeReference cho {len(selected_objs)} objects.")
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def make_reference_from_root(context):
+    selected_objs = context.selected_objects
+    active_obj = context.active_object # Đây sẽ là bản Reference (chọn sau cùng)
+
+    # 1. Kiểm tra điều kiện: Phải chọn đúng 2 object
+    if len(selected_objs) != 2 or active_obj is None:
+        msg = ["Lỗi: Chọn đúng 2 object", "Chọn bản GỐC trước, bản THAM CHIẾU sau cùng."]
+        utils.show_detailed_message(msg, title="Sai Quy Trình", icon='ERROR')
+        return False
+
+    # Xác định object còn lại (Đây sẽ là bản Gốc - Root)
+    root_obj = next(obj for obj in selected_objs if obj != active_obj)
+    ref_obj = active_obj
+
+    # 2. Kiểm tra tồn tại ID
+    if "CMC_Id" not in root_obj.keys() or "CMC_Id" not in ref_obj.keys():
+        msg = ["Lỗi: Thiếu ID", "Một trong hai object chưa có ID định danh."]
+        utils.show_detailed_message(msg, title="Lỗi Dữ Liệu", icon='ERROR')
+        return False
+    
+    # 3. Kiểm tra ID trùng khớp (Để xác nhận chúng là bản sao của nhau)
+    shared_id = root_obj["CMC_Id"]
+    if shared_id != ref_obj["CMC_Id"]:
+        msg = [
+            "ID Không Khớp", 
+            "Hai object phải là bản sao Alt+D của nhau trước đó.",
+            f"ID Gốc: {shared_id}",
+            f"ID Tham Chiếu: {ref_obj['CMC_Id']}"
+        ]
+        utils.show_detailed_message(msg, title="Liên Kết Thất Bại", icon='ERROR')
+        return False
+
+    # --- TIẾN HÀNH CHUYỂN ĐỔI ---
+
+    # A. Thiết lập cho BẢN GỐC (root_obj)
+    root_obj["CMC_IsRootObject"] = True
+    root_obj["CMC_RootObjectId"] = -1
+    root_obj["CMC_RootObjectName"] = root_obj.name # Lưu tên để Unity tìm prefab
+    
+    # Khóa UI cho bản Gốc
+    root_obj.id_properties_ui("CMC_Id").update(min=shared_id, max=shared_id)
+    root_obj.id_properties_ui("CMC_IsRootObject").update(description="Đây là bản gốc trong Library")
+
+    # B. Thiết lập cho BẢN THAM CHIẾU (ref_obj - Active Object)
+    # Tạo ID mới duy nhất cho bản tham chiếu
+    new_id_for_ref = int(time.time()) + 10 
+    
+    # Reset khóa cũ để ghi đè
+    ref_obj.id_properties_ui("CMC_Id").update(min=0, max=2000000000) 
+    
+    ref_obj["CMC_Id"] = new_id_for_ref
+    ref_obj["CMC_IsRootObject"] = False
+    ref_obj["CMC_RootObjectId"] = shared_id # Trỏ về ID của bản Gốc
+    ref_obj["CMC_RootObjectName"] = root_obj.name # Lưu tên bản gốc để Unity biết cần spawn prefab nào
+    
+    # Khóa ID mới cho bản Tham chiếu
+    ref_obj.id_properties_ui("CMC_Id").update(min=new_id_for_ref, max=new_id_for_ref)
+    ref_obj.id_properties_ui("CMC_RootObjectId").update(min=shared_id, max=shared_id)
+
+    # 4. Thông báo và Cập nhật HUD
+    msg = [
+        "Thiết Lập Tham Chiếu Thành Công",
+        f"Gốc (Root): {root_obj.name}",
+        f"Tham Chiếu (Ref): {ref_obj.name}",
+        f"Kết nối qua ID: {shared_id}"
+    ]
+    utils.show_detailed_message(msg, title="Thành Công", icon='CHECKMARK')
+    
+    # Cập nhật HUD cho Object đang chọn (Ref)
+    utils.refresh_hud_data(ref_obj, op_name="MAKE REF")
+
+    print(f"✅ Đã biến {ref_obj.name} thành bản tham chiếu của {root_obj.name}")
     return True
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
@@ -533,6 +636,200 @@ def sync_position_data(context):
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
+
+def sync_all_data(context):
+    get_reference_object_list()
+    get_root_object_list()
+
+    # Đồng Bộ Hóa Danh Sách Object Tham Chiếu
+        # Lấy Danh Sách Object Tham Chiếu
+
+    # Đồng bộ hóa Danh Sách Object Gốc
+        # Lấy Danh Sách Object Gốc
+
+        # Đồng Bộ Từng Object Gốc
+            
+    if len(root_object_list) > 0:
+        for object in root_object_list:
+            sync_root_instance(object)
+
+    # Đồng Bộ Hóa Tên + Vị Trí
+
+        # root nếu đang nằm ngoài Collection =>
+            # => Đưa vào một List tạm, sắp xếp theo thứ tự tạo root object (id)
+                # => Đánh dấu root cuối cùng được đồng bộ đó là Lastest
+
+    sync_position(context)
+
+    return True
+
+reference_object_list = []
+def get_reference_object_list():
+    global reference_object_list
+    reference_object_list = []
+    for object in bpy.data.objects:
+        # Kiểm tra nếu object đó có ID và IsRootObject == False và CMC_RootObjectId != -1
+        if object.get("CMC_Id") != "" and object.get("CMC_IsRootObject") == False and object.get("CMC_RootObjectId") != -1:
+            reference_object_list.append(object)
+
+    # Sắp Xếp Theo Thứ Tự Tăng Dần Của ID
+    reference_object_list.sort(key=lambda x: x["CMC_Id"])
+
+    return reference_object_list
+
+root_object_list = []
+def get_root_object_list():
+    global root_object_list
+    root_object_list = []
+    for object in bpy.data.objects:
+        # Kiểm tra nếu object đó có ID và IsRootObject = True
+        if object.get("CMC_Id") != "" and object.get("CMC_IsRootObject") == True:
+            root_object_list.append(object)
+
+    # Sắp Xếp Theo Thứ Tự Tăng Dần Của ID
+    root_object_list.sort(key=lambda x: x["CMC_Id"])
+
+    return root_object_list
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def sync_root_instance(root_object):
+    root_object["CMC_RootObjectName"] = root_object.name
+
+    # Duyệt Qua Danh Sách Object Tham Chiếu Để Đồng Bộ
+    for reference_object in reference_object_list:
+        if reference_object["CMC_RootObjectId"] == root_object["CMC_Id"]:
+            sync_reference_instance(reference_object, root_object)
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def sync_reference_instance(reference_object, root_object):
+
+    reference_object["CMC_RootObjectName"] = root_object["CMC_RootObjectName"]
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def clear_lastest_create():
+
+    for root_object in root_object_list:
+        root_object["CMC_IsLastestCreate"] = False
+
+    return True
+
+def make_lastest_create(object):
+
+    for root_object in root_object_list:
+        root_object["CMC_IsLastestCreate"] = False
+
+    object["CMC_IsLastestCreate"] = True
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def sync_position(context):
+
+    # 1. Khởi tạo/Lấy các Collection
+    demo_scene_collection = get_or_create_collection("CMC_Demo_Scene")
+    library_scene_collection = get_or_create_collection("CMC_Library_Scene")
+
+    lastest_create_object = None
+    if len(root_object_list) > 0:
+        for r_object in root_object_list:
+            if r_object["CMC_IsLastestCreate"] == True:
+                lastest_create_object = r_object
+                break
+        
+        # Nếu chưa có Object nào được đánh dấu là tạo cuối cùng
+        # Lấy Object đầu tiên làm Object này => Nhằm sắp xếp từ Object này
+        if lastest_create_object == None:
+            lastest_create_object = root_object_list[0]
+
+    # Nếu lastest_create chưa có trong Library Collection 
+    # => Set vị trí bắt đầu cho việc sắp xếp               
+        if lastest_create_object.name in library_scene_collection.objects:
+            # Nếu đã ở đúng chỗ, ta chỉ cần đảm bảo nó không nằm ở collection nào khác
+            # (Tránh tình trạng một object hiện ở 2 nơi)
+            for col in list(lastest_create_object.users_collection):
+                if col != library_scene_collection:
+                    col.objects.unlink(lastest_create_object)
+        else:
+            start_position_x = 5.0
+            start_position_y = 0.0
+            start_position_z = 0.0
+            lastest_create_object.location.x = start_position_x
+            lastest_create_object.location.y = start_position_y
+            lastest_create_object.location.z = start_position_z
+
+    # Lấy danh sách Root Object chưa có trong Library Collection 
+    # => Sắp xếp chúng dựa trên lastest_create_object làm vị trí bắt đầu
+    root_object_not_in_library_collection_list = []
+    if len(root_object_list) > 0:
+        for r_object in root_object_list:
+            if r_object.name in library_scene_collection.objects:
+                continue
+            else:
+                root_object_not_in_library_collection_list.append(r_object)
+
+    if len(root_object_not_in_library_collection_list) > 0:
+        # Loại bỏ lastest_create_object 
+        for r_object in root_object_not_in_library_collection_list:
+            if r_object["CMC_Id"] == lastest_create_object["CMC_Id"]:
+                root_object_not_in_library_collection_list.remove(lastest_create_object)
+                break
+
+        # 1. Hủy chọn tất cả các object đang có để làm sạch scene
+        bpy.ops.object.select_all(action='DESELECT')
+
+        # 2. Thiết lập Active Object (Vật thể có viền vàng)
+        bpy.context.view_layer.objects.active = lastest_create_object
+
+        # 3. Chọn Active Object đó (Để nó có viền)
+        lastest_create_object.select_set(True)
+
+        # 4. Chọn danh sách các object khác (Vật thể có viền cam)
+        for obj in root_object_not_in_library_collection_list:
+            obj.select_set(True)
+
+        # 5. Sắp xếp
+        cfg = context.scene.cmc_sorting_config
+        clear_lastest_create()
+        logic.arrange_objects_grid(context, cfg, "+X++", True)
+
+    # Đưa tất cả vào Collection 
+
+    if len(root_object_list) > 0:
+        for root_object in root_object_list:
+            move_to_collection(root_object, library_scene_collection)
+            sync_object_data(context,root_object)
+    
+        
+
+    if len(reference_object_list) > 0:
+        for reference_object in reference_object_list:
+            move_to_collection(reference_object, demo_scene_collection)
+            sync_object_data(context,reference_object)
+
+    print(f"OBJECT TẠO CUỐI CÙNG: {lastest_create_object.name} ; {len(root_object_not_in_library_collection_list)}")
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+
 def export_position_data_to_json(context):
 
     # Đường dẫn xuất file
@@ -546,16 +843,50 @@ def export_position_data_to_json(context):
         return False, 0
 
     data = []
+    # for obj in selected_objects:
+    #     # 1. Lấy tọa độ World Space
+    #     pos = obj.matrix_world.translation
+        
+    #     # 2. Thu thập dữ liệu Custom Properties (với giá trị mặc định nếu thiếu)
+    #     custom_props = {
+    #         "CMC_Id": obj.get("CMC_Id", -1),
+    #         "CMC_IsRootObject": bool(obj.get("CMC_IsRootObject", False)),
+    #         "CMC_RootObjectId": obj.get("CMC_RootObjectId", -1),
+    #         "CMC_RootObjectName": obj.get("CMC_RootObjectName", "")
+    #     }
+
+    #     # 3. Đóng gói dữ liệu
+    #     data.append({
+    #         "name": obj.name.rsplit('.', 1)[0],
+    #         # Toạ độ đã đảo trục Blender (Z-up) -> Unity (Y-up) theo công thức của bạn
+    #         "pos": {
+    #             "x": pos.x * (-1),
+    #             "y": pos.z,
+    #             "z": pos.y * (-1)
+    #         },
+    #         # Đưa toàn bộ metadata vào mục "properties"
+    #         "properties": custom_props
+    #     })
     for obj in selected_objects:
         # 1. Lấy tọa độ World Space
         pos = obj.matrix_world.translation
         
+        rotation_X = obj.get("CMC_Rotation_X", 0)
+        rotation_Y = obj.get("CMC_Rotation_Y", 0)
+        rotation_Z = obj.get("CMC_Rotation_Z", 0)
+        rotation_Scalar_Part = obj.get("CMC_Rotation_Scalar_Part", 0)
+
         # 2. Thu thập dữ liệu Custom Properties (với giá trị mặc định nếu thiếu)
         custom_props = {
             "CMC_Id": obj.get("CMC_Id", -1),
             "CMC_IsRootObject": bool(obj.get("CMC_IsRootObject", False)),
             "CMC_RootObjectId": obj.get("CMC_RootObjectId", -1),
-            "CMC_RootObjectName": obj.get("CMC_RootObjectName", "")
+            "CMC_RootObjectName": obj.get("CMC_RootObjectName", ""),
+
+            "CMC_Rotation_X" : obj.get("CMC_Rotation_X", 0),
+            "CMC_Rotation_Y" : obj.get("CMC_Rotation_Y", 0),
+            "CMC_Rotation_Z" : obj.get("CMC_Rotation_Z", 0),
+            "CMC_Rotation_Scalar_Part" : obj.get("CMC_Rotation_Scalar_Part", 0),
         }
 
         # 3. Đóng gói dữ liệu
@@ -566,6 +897,12 @@ def export_position_data_to_json(context):
                 "x": pos.x * (-1),
                 "y": pos.z,
                 "z": pos.y * (-1)
+            },
+            "rotation": {
+                "x": rotation_X,
+                "y": rotation_Z,
+                "z": rotation_Y,
+                "w": rotation_Scalar_Part * (-1)
             },
             # Đưa toàn bộ metadata vào mục "properties"
             "properties": custom_props
@@ -583,3 +920,49 @@ def export_position_data_to_json(context):
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def rename_with_smart_suffix(context):
+    active_obj = context.active_object
+    selected_objs = context.selected_objects
+    
+    if not active_obj or not selected_objs:
+        return False
+
+    # 1. Làm sạch tên: Xóa đuôi .001 VÀ xóa toàn bộ khoảng trắng
+    # Ví dụ: "Tall Table .001" -> "TallTable"
+    raw_name = active_obj.name.rsplit('.', 1)[0]
+    base_name = raw_name.replace(" ", "")
+    
+    alphabet = "abcdefghijklmnopqrstuvwxyz"
+
+    # Sắp xếp để đảm bảo thứ tự đổi tên logic (ví dụ theo vị trí X)
+    objs_to_rename = sorted(selected_objs, key=lambda o: o.location.x)
+
+    # TRƯỜNG HỢP 2: Nếu tên gốc đã có "_" (Ví dụ: TallTable_01)
+    if "_" in base_name:
+        print(f"Case 2: Suffix a,b,c... for {base_name}")
+        for i, obj in enumerate(objs_to_rename):
+            if i < len(alphabet):
+                char_suffix = alphabet[i]
+                obj.name = f"{base_name}{char_suffix}"
+            else:
+                # Nếu vượt quá 26 chữ cái (a1, a2...)
+                obj.name = f"{base_name}{alphabet[i % 26]}{i // 26}"
+
+    # TRƯỜNG HỢP 1: Tên thuần Text (Ví dụ: TallTable)
+    else:
+        print(f"Case 1: Suffix _01, _02... for {base_name}")
+        for i, obj in enumerate(objs_to_rename):
+            obj.name = f"{base_name}_{i+1:02d}"
+
+    # Đổi tên Mesh Data bên trong luôn cho sạch sẽ
+    for obj in objs_to_rename:
+        if obj.type == 'MESH':
+            obj.data.name = f"Data_{obj.name}"
+
+    print(f"✅ Rename hoàn tất (Không khoảng trắng): {base_name}")
+    return True
+    
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+

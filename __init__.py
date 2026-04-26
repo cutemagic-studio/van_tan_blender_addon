@@ -6,6 +6,7 @@
 #     "location": "View3D > Ctrl+Shift+0",
 #     "category": "Object",
 # }
+
 bl_info = {
     "name": "Van Tan Ultimate Tools",
     "author": "Van Tan",
@@ -15,6 +16,8 @@ bl_info = {
     "description": "Hệ thống quản lý Object và Mesh tối ưu cho Unity",
     "category": "Object",
 }
+
+# PHÍM TẮT DUPPLICATE: SHIFT + ALT + (Nút mũi tên hướng xuống)
 
 import bpy
 from . import constants, utils, operators, keymaps, hud

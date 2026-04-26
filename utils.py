@@ -1,6 +1,7 @@
 import bpy
 import blf
 from mathutils import Vector
+from .functions import object_tools
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
@@ -109,14 +110,18 @@ hud_data = {
     "CMC_IsReferenceObject": False,
     "CMC_RootObjectName": "",
 
-    "": 0,
+    "CMC_ReferenceNumber": 0,
 
     # X: Ngang (Width)
     # Y: Sâu (Depth)
     # Z: Cao (Height)
-    "CMC_X_Width": 0,
-    "CMC_Y_Depth": 0,
-    "CMC_Z_Height": 0,
+    "CMC_Width": 0,
+    "CMC_Depth": 0,
+    "CMC_Height": 0,
+
+    "CMC_Rotation_X": 0,
+    "CMC_Rotation_Y": 0,
+    "CMC_Rotation_Z": 0,
 
     # Biến đếm làm mới dữ liệu
     "currentRefreshIndexCount": 0,
@@ -139,48 +144,77 @@ def refresh_hud_data(obj, op_name="Update"):
 
     print(f"HUD - refresh_hud_data: '{hud_data.get('neededRefreshIndexCount')}'")
 
-# --- BƯỚC 1: HÀM TÍNH TOÁN (Chỉ chạy khi có thay đổi) ---
+# --- HÀM TÍNH TOÁN (Chỉ chạy khi có thay đổi) ---
 def update_object_stats(scene):
-    global hud_data
-    # 1. Lấy object active và danh sách đang chọn
-    obj = bpy.context.active_object
-    selected = bpy.context.selected_objects
+    try:
+        # Code xử lý của bạn ở đây
+        
+        global hud_data
+        # 1. Lấy object active và danh sách đang chọn
+        obj = bpy.context.active_object
+        selected = bpy.context.selected_objects
 
-    print(f"HUD - update_object_stats: '{hud_data.get('name')}'")
+        print("HUD - Cập nhật dữ liệu") 
 
-    # ĐIỀU KIỆN: Nếu không có object nào được chọn (click ra ngoài)
-    # Hoặc object active không nằm trong danh sách đang chọn
-    if not selected or (obj not in selected):
-        if hud_data.get("name") != "":
-            hud_data["name"] = ""
-            hud_data["props"] = {}
-            hud_data["CMC_Id"] = "None"
-            hud_data["CMC_IsRootObject"] = False
-            hud_data["CMC_IsReferenceObject"] = False
-            hud_data["CMC_RootObjectName"] = ""
-            hud_data["CMC_X_Width"] = 0,
-            hud_data["CMC_Y_Depth"] = 0,
-            hud_data["CMC_Z_Height"] = 0,
-            print(f"DEBUG: HUD Cleared | Name: '{hud_data.get('name')}'")
-        return
+        # ĐIỀU KIỆN: Nếu không có object nào được chọn (click ra ngoài)
+        # Hoặc object active không nằm trong danh sách đang chọn
+        if not selected or (obj not in selected):
+            if hud_data.get("name") != "":
+                reset_hud_data(hud_data)
+            print("Không Có Object Nào Được Chọn")
+            
+            return
+        else:
+            print("Đang Có Object Được Chọn")
 
-    # TRƯỜNG HỢP 2: Kiểm tra xem có cần Update không
-    # Cần update khi: Đổi tên Object HOẶC Chỉ số Refresh bị lệch
-    is_new_object = obj.name != hud_data.get("name")
-    is_forced_refresh = hud_data["neededRefreshIndexCount"] != hud_data["currentRefreshIndexCount"]
+        # TRƯỜNG HỢP 2: Kiểm tra xem có cần Update không
+        # Cần update khi: Đổi tên Object HOẶC Chỉ số Refresh bị lệch
+        is_new_object = obj.name != hud_data.get("name")
+        is_forced_refresh = hud_data["neededRefreshIndexCount"] != hud_data["currentRefreshIndexCount"]
 
-    if not (is_new_object or is_forced_refresh):
-        return
+        if not (is_new_object or is_forced_refresh):
+            return
 
-    # --- BẮT ĐẦU TÍNH TOÁN (Chỉ chạy khi lọt qua các bộ lọc trên) ---
-    
-    # Đồng bộ lại chỉ số đệm
-    hud_data["currentRefreshIndexCount"] = hud_data["neededRefreshIndexCount"]
+        # --- BẮT ĐẦU TÍNH TOÁN (Chỉ chạy khi lọt qua các bộ lọc trên) ---
+        
+        # Đồng bộ lại chỉ số đệm
+        hud_data["currentRefreshIndexCount"] = hud_data["neededRefreshIndexCount"]
+        
+        # Đồng bộ lại dữ liệu Object
+        object_tools.sync_object_data(bpy.context, obj)
+
+        # Đồng bộ lại dữ liệu Hud
+        sync_hud_data(hud_data, obj)
+        
+        ##### Các hàm phức tạp và tốn nhiều chi phí để xử lý
+
+        #
+        find_Reference_Object(hud_data)
+
+        #
+        find_Root_Object(hud_data)
+
+        pass
+    except Exception as e:
+        print(f"Hàm Cập Nhật HUD Xảy Ra Lỗi: {e}")
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def sync_hud_data(hud_data, obj):
     
     hud_data["name"] = obj.name
     hud_data["type"] = obj.type
-    
-    # Lấy Custom Properties an toàn
+
+    hud_data["CMC_Width"] = obj.get("CMC_Width")
+    hud_data["CMC_Depth"] = obj.get("CMC_Depth")
+    hud_data["CMC_Height"] = obj.get("CMC_Height")
+
+    hud_data["CMC_Rotation_X"] = obj.get("CMC_Rotation_X")
+    hud_data["CMC_Rotation_Y"] = obj.get("CMC_Rotation_Y")
+    hud_data["CMC_Rotation_Z"] = obj.get("CMC_Rotation_Z")
+
+    # Lấy Custom Properties an toàn 
     hud_data["props"] = {k: obj[k] for k in obj.keys() if k not in '_RNA_UI'}
     hud_data["CMC_Id"] = hud_data["props"].get("CMC_Id", "None")
     hud_data["CMC_IsRootObject"] = hud_data["props"].get("CMC_IsRootObject", False)
@@ -189,166 +223,204 @@ def update_object_stats(scene):
         hud_data["CMC_IsReferenceObject"] = True
     else:
         hud_data["CMC_IsReferenceObject"] = False
-     
-    dims = get_world_dimensions(obj)
-    hud_data["CMC_X_Width"] = dims.x
-    hud_data["CMC_Y_Depth"] = dims.y
-    hud_data["CMC_Z_Height"] = dims.z
-    if "CMC_X_Width" in obj.keys():
-        if obj.get("CMC_X_Width") != dims.x:
-            obj["CMC_X_Width"] = dims.x
-    if "CMC_Y_Depth" in obj.keys():
-        if obj.get("CMC_Y_Depth") != dims.y:
-            obj["CMC_Y_Depth"] = dims.y
-    if "CMC_Z_Height" in obj.keys():
-        if obj.get("CMC_Z_Height") != dims.z:
-            obj["CMC_Z_Height"] = dims.z
-    
-    # 2. Tìm Object tham chiếu (Vòng lặp nặng nằm ở đây)
-    # found_refs = []
-    # for o in scene.objects:
-    #     if o != obj and obj.name in o.name:
-    #         found_refs.append(o.name)
-    # hud_data["CMC_Id"] = found_refs
 
-    # --- BƯỚC 2: TÌM TÊN CỦA ROOT OBJECT ---
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def reset_hud_data(hud_data):
+    hud_data["name"] = ""
+    hud_data["props"] = {}
+    hud_data["CMC_Id"] = "None"
+    hud_data["CMC_IsRootObject"] = False
+    hud_data["CMC_IsReferenceObject"] = False
+    hud_data["CMC_RootObjectName"] = ""
+    hud_data["CMC_ReferenceNumber"] = 0,
+
+    hud_data["CMC_Width"] = 0,
+    hud_data["CMC_Depth"] = 0,
+    hud_data["CMC_Height"] = 0,
+
+    hud_data["CMC_Rotation_X"] = 0,
+    hud_data["CMC_Rotation_Y"] = 0,
+    hud_data["CMC_Rotation_Z"] = 0,
+
+    print(f"DEBUG: HUD Cleared | Name: '{hud_data.get('name')}'")
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def find_Root_Object(hud_data):
+
     root_name_found = "Unknown_Root"
     reference_root_id = -1
+
     if hud_data["props"].get("CMC_IsRootObject", False) == False and hud_data["props"].get("CMC_RootObjectId", -1) != -1:
         reference_root_id = hud_data["props"].get("CMC_RootObjectId", -1)
         
         # Duyệt qua toàn bộ object trong file để tìm object có ID khớp với RootObjectId
-        for o in bpy.data.objects:
+        for object in bpy.data.objects:
             # Kiểm tra nếu object đó có ID và IsRootObject = True
-            if o.get("CMC_Id") == reference_root_id and (o.get("CMC_IsRootObject") is True or o.get("CMC_IsRootObject") == 1):
-                root_name_found = o.name
+            if object.get("CMC_Id") == reference_root_id and (object.get("CMC_IsRootObject") is True or object.get("CMC_IsRootObject") == 1):
+                root_name_found = object.name
                 hud_data["CMC_RootObjectName"] = root_name_found
                 break
     
     if root_name_found == "Unknown_Root":
         print(f"Cảnh báo: Không tìm thấy Root Object có ID {reference_root_id} trong file này.")
 
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def find_Reference_Object(hud_data):
+
+    # Tính số lượng Reference hiện có
+    reference_number = 0
+
+    if hud_data["CMC_IsRootObject"] == True:
+        # Duyệt qua toàn bộ object trong file để tìm object có RootObjectId khớp với Id
+        for object in bpy.data.objects:
+            # Kiểm tra nếu object đó có ID và IsRootObject = True
+            if object.get("CMC_RootObjectId") == hud_data["CMC_Id"]:
+                reference_number += 1
+
+    hud_data["CMC_ReferenceNumber"] = reference_number
+
+    return True
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
-# def draw_callback_px(self, context):
-#     # Lấy thông tin từ bpy.context thay vì tham số truyền vào để tránh lỗi Restrict
-#     region = bpy.context.region
-#     if not region: return
-
-#     obj = bpy.context.active_object
-#     if not obj: return
-
-#     font_id = 0
-#     blf.size(font_id, 18)
-#     blf.color(font_id, 1.0, 0.8, 0.1, 1.0) # Màu vàng cam CMC
-
-#     # Tọa độ vẽ (Góc dưới bên trái)
-#     x_pos = 25 
-#     y_pos = 50 # Cách đáy màn hình 50 pixel
-
-#     # Vẽ thông tin Object
-#     blf.position(font_id, x_pos, y_pos, 0)
-#     blf.draw(font_id, f"Obj đang chọn: {obj.name}")
-
-#     blf.color(font_id, 0.4, 1.0, 0.4, 1.0)
-#     blf.position(font_id, x_pos, y_pos - 25, 0)
-#     blf.draw(font_id, f"Loại: {obj.type}") 
-
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
-# --- BƯỚC 2: HÀM VẼ HUD (Chỉ lấy dữ liệu từ hud_data ra vẽ) ---
+
+
+# ---  HÀM VẼ HUD (Chỉ lấy dữ liệu từ hud_data ra vẽ) ---
 def draw_callback_px(self, context):
+    if check_change_active_object(context) == False:
+        return
+    
+    #####
     global hud_data
 
-    # Nếu name là rỗng (đã được clear ở bước trên), ngừng vẽ ngay
-    if not hud_data.get("name"):
+    try:
+        font_id = 0
+        blf.size(font_id, 18)
+        x_pos, y_pos = 30, 200
 
-        # print(f"DEBUG: '{hud_data.get('name')}'")
-        return
-
-    font_id = 0
-    blf.size(font_id, 18)
-    x_pos, y_pos = 30, 200
-    
-    # Vẽ tên (Màu xanh lá)
-    # blf.color(font_id, 0.0, 1.0, 0.0, 1.0)
-    # blf.position(font_id, x_pos, y_pos, 0)
-    # blf.draw(font_id, f"Đang chọn: {hud_data['name']}")
-
-    # 1. Thiết lập màu trắng xám nhẹ cho chữ "Đang chọn:"
-    blf.color(font_id, 0.8, 0.8, 0.8, 1.0) 
-    blf.position(font_id, x_pos, y_pos, 0)
-    blf.draw(font_id, "Đang chọn: ")
-    # 2. Tính toán độ dài của chữ vừa vẽ để không bị đè lên nhau
-    # blf.dimensions trả về (width, height) của chuỗi text
-    text_width, text_height = blf.dimensions(font_id, "Đang chọn: ")
-    # 3. Thiết lập màu xanh cho tên Object
-    blf.color(font_id, 0.2, 1.0, 0.2, 1.0)
-    blf.position(font_id, x_pos + text_width, y_pos, 0) # Cộng thêm độ rộng của chữ trước đó
-    blf.draw(font_id, hud_data['name'])
-
-
-    
-    # Vẽ Custom Properties (Màu Cyan)
-    if hud_data["CMC_Id"]:
-        y_pos -= 25
-        # blf.color(font_id, 0.0, 0.8, 1.0, 1.0)
-        # blf.position(font_id, x_pos, y_pos, 0)
-        # blf.draw(font_id, f"Id: {hud_data['CMC_Id']}")
-
-        # 1. Thiết lập màu trắng xám nhẹ cho chữ "Id: "
+        # 1. Thiết lập màu trắng xám nhẹ cho chữ "Đang chọn:"
         blf.color(font_id, 0.8, 0.8, 0.8, 1.0) 
         blf.position(font_id, x_pos, y_pos, 0)
-        blf.draw(font_id, "Id: ")
+        blf.draw(font_id, "Đang chọn: ")
         # 2. Tính toán độ dài của chữ vừa vẽ để không bị đè lên nhau
         # blf.dimensions trả về (width, height) của chuỗi text
-        text_width, text_height = blf.dimensions(font_id, "Id: ")
-        # 3. Thiết lập màu xanh cho Id Object
-        blf.color(font_id, 0.0, 0.8, 1.0, 1.0)
+        text_width, text_height = blf.dimensions(font_id, "Đang chọn: ")
+        # 3. Thiết lập màu xanh cho tên Object
+        blf.color(font_id, 0.2, 1.0, 0.2, 1.0)
         blf.position(font_id, x_pos + text_width, y_pos, 0) # Cộng thêm độ rộng của chữ trước đó
-        blf.draw(font_id, f"{hud_data['CMC_Id']}")
-
+        blf.draw(font_id, hud_data['name'])
         
-    #
-    if hud_data["CMC_IsRootObject"] == True:
-        y_pos -= 25
-        blf.color(font_id, 0.8, 0.2, 0.2, 1.0)
-        blf.position(font_id, x_pos, y_pos, 0)
-        blf.draw(font_id, "Obj gốc")
-    elif hud_data["CMC_IsReferenceObject"] == True:
-        y_pos -= 25
-        blf.color(font_id, 1.0, 0.8, 0.1, 1.0)
-        blf.position(font_id, x_pos, y_pos, 0)
-        blf.draw(font_id, f"Obj tham chiếu ({hud_data['CMC_RootObjectName']})")
+        # Vẽ Custom Properties (Màu Cyan)
+        if hud_data["CMC_Id"]:
+            y_pos -= 25
+            # blf.color(font_id, 0.0, 0.8, 1.0, 1.0)
+            # blf.position(font_id, x_pos, y_pos, 0)
+            # blf.draw(font_id, f"Id: {hud_data['CMC_Id']}")
 
-    y_pos -= 25
-    blf.color(font_id, 0.5, 0.9, 0.5, 1.0)
-    blf.position(font_id, x_pos, y_pos, 0)
-    blf.draw(font_id, f"(X): {hud_data['CMC_X_Width']:.2f}m x (Y): {hud_data['CMC_Y_Depth']:.2f}m x (Z): {hud_data['CMC_Z_Height']:.2f}m")
+            # 1. Thiết lập màu trắng xám nhẹ cho chữ "Id: "
+            blf.color(font_id, 0.8, 0.8, 0.8, 1.0) 
+            blf.position(font_id, x_pos, y_pos, 0)
+            blf.draw(font_id, "Id: ")
+            # 2. Tính toán độ dài của chữ vừa vẽ để không bị đè lên nhau
+            # blf.dimensions trả về (width, height) của chuỗi text
+            text_width, text_height = blf.dimensions(font_id, "Id: ")
+            # 3. Thiết lập màu xanh cho Id Object
+            blf.color(font_id, 0.0, 0.8, 1.0, 1.0)
+            blf.position(font_id, x_pos + text_width, y_pos, 0) # Cộng thêm độ rộng của chữ trước đó
+            blf.draw(font_id, f"{hud_data['CMC_Id']}")
+            
+        #
+        if hud_data["CMC_IsRootObject"] == True:
+            y_pos -= 25
+            blf.color(font_id, 0.8, 0.2, 0.2, 1.0)
+            blf.position(font_id, x_pos, y_pos, 0)
+            blf.draw(font_id, "Obj gốc")
+            if hud_data["CMC_ReferenceNumber"] != 0:
+                
+                text_width, text_height = blf.dimensions(font_id, "Obj gốc")
+                blf.color(font_id, 0.82, 0.88, 0.9, 1.0)
+                blf.position(font_id, x_pos + text_width, y_pos, 0)
+                blf.draw(font_id, f" ({hud_data['CMC_ReferenceNumber']})")
 
-    #
-    y_pos -= 25
-    blf.size(font_id, 12)
-    blf.color(font_id, 0.8, 0.8, 0.8, 1.0)
-    blf.position(font_id, x_pos, y_pos, 0)
-    blf.draw(font_id, f"Refresh Time: {hud_data['currentRefreshIndexCount']} / {hud_data['neededRefreshIndexCount']}")
+        elif hud_data["CMC_IsReferenceObject"] == True:
+            y_pos -= 25
+            blf.color(font_id, 1.0, 0.8, 0.1, 1.0)
+            blf.position(font_id, x_pos, y_pos, 0)
+            blf.draw(font_id, f"Obj tham chiếu ({hud_data['CMC_RootObjectName']})")
+
+        y_pos -= 25
+        blf.color(font_id, 0.5, 0.9, 0.5, 1.0)
+        blf.position(font_id, x_pos, y_pos, 0)
+        blf.draw(font_id, f"(sX): {hud_data['CMC_Width']:.2f}m x (sY): {hud_data['CMC_Depth']:.2f}m x (sZ): {hud_data['CMC_Height']:.2f}m")
+
+        y_pos -= 25
+        blf.color(font_id, 0.4, 0.8, 0.9, 1.0)
+        blf.position(font_id, x_pos, y_pos, 0)
+        blf.draw(font_id, f"(rX): {hud_data['CMC_Rotation_X']:.2f}m x (rY): {hud_data['CMC_Rotation_Y']:.2f}m x (rZ): {hud_data['CMC_Rotation_Z']:.2f}m")
+
+        #
+        y_pos -= 25
+        blf.size(font_id, 12)
+        blf.color(font_id, 0.8, 0.8, 0.8, 1.0)
+        blf.position(font_id, x_pos, y_pos, 0)
+        blf.draw(font_id, f"Refresh Time: {hud_data['currentRefreshIndexCount']} / {hud_data['neededRefreshIndexCount']}")
+        pass
+
+    except Exception as e:
+        print(f"Hàm Vẽ HUD Xảy Ra Lỗi: {e}")
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+last_active_obj = None
+
+def check_change_active_object(context):
+    global last_active_obj
     
+    current_obj = bpy.context.active_object
+    selected = bpy.context.selected_objects
 
-# def toggle_hud(enable):
-#     global _handle
-#     if enable and _handle is None:
-#         # Sử dụng 'WINDOW' để vẽ đè lên toàn bộ cửa sổ làm việc
-#         _handle = bpy.types.SpaceView3D.draw_handler_add(
-#             draw_callback_px, (None, None), 'WINDOW', 'POST_PIXEL'
-#         )
-#     elif not enable and _handle is not None:
-#         bpy.types.SpaceView3D.draw_handler_remove(_handle, 'WINDOW')
-#         _handle = None
+    # 1. TRƯỜNG HỢP: Đổi từ Object này sang Object khác
+    if current_obj and current_obj != last_active_obj:
+        # Chỉ cập nhật khi object nằm trong danh sách chọn (tránh lag khi click nhầm)
+        if current_obj in selected:
+            update_object_stats(bpy.context.scene)
+            last_active_obj = current_obj
+            # print(f"Đã cập nhật dữ liệu cho: {current_obj.name}")
+            print(f"Bạn Click chọn object {current_obj.name} - đã cập nhật dữ liệu HUD (Select)")
+
+    # 2. TRƯỜNG HỢP: Click ra ngoài hoặc Object Active không còn được chọn
+    if not selected or (current_obj not in selected):
+        if last_active_obj is not None: # Chỉ reset một lần duy nhất để tiết kiệm CPU
+            reset_hud_data(hud_data)
+            last_active_obj = None
+            print("Bạn Click khỏi tất cả object - đã xóa dữ liệu HUD (Deselect)")
+        return False
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def toggle_hud(enable):
     global _handle
@@ -358,16 +430,16 @@ def toggle_hud(enable):
             draw_callback_px, (None, None), 'WINDOW', 'POST_PIXEL'
         )
         # 2. Đăng ký sự kiện thay đổi lựa chọn
-        if update_object_stats not in bpy.app.handlers.depsgraph_update_post:
-            bpy.app.handlers.depsgraph_update_post.append(update_object_stats)
+        # if update_object_stats not in bpy.app.handlers.depsgraph_update_post:
+        #     bpy.app.handlers.depsgraph_update_post.append(update_object_stats)
             
     elif not enable and _handle is not None:
         # 1. Gỡ vẽ GPU
         bpy.types.SpaceView3D.draw_handler_remove(_handle, 'WINDOW')
         _handle = None
         # 2. Gỡ sự kiện
-        if update_object_stats in bpy.app.handlers.depsgraph_update_post:
-            bpy.app.handlers.depsgraph_update_post.remove(update_object_stats)
+        # if update_object_stats in bpy.app.handlers.depsgraph_update_post:
+        #     bpy.app.handlers.depsgraph_update_post.remove(update_object_stats)
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
