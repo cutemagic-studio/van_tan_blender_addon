@@ -443,20 +443,30 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             if ui.show_sync_sub:
                 col = sub_box.column(align=True)
 
-                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Bản Gốc (List Tự Động)", icon='FILE_REFRESH')
-                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.SYNC_ROOT_OBJECT'
+                # thaoTacQuanTrong01 = col.operator("vt.object_action", text="Bản Gốc (List Tự Động)", icon='FILE_REFRESH')
+                # thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.SYNC_ROOT_OBJECT'
+                # col.scale_y = 1.5
+
+                # col.separator()
+
+                # thaoTacQuanTrong02 = col.operator("vt.object_action", text="Bản Tham Chiếu (List Chọn)", icon='FILE_REFRESH')
+                # thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.SYNC_REFERENCE_OBJECT'
+                # col.scale_y = 1.5
+
+                # col.separator()
+
+                # thaoTacQuanTrong03 = col.operator("vt.object_action", text="Vị Trí (Collection & Transform)", icon='ORIENTATION_GIMBAL')
+                # thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.SYNC_OBJECT_POSITION_DATA'
+                # col.scale_y = 1.5
+
+                thaoTacQuanTrong01 = col.operator("vt.object_action", text="Gán Vị Trí Sắp Xếp Mới", icon='ORIENTATION_GIMBAL')
+                thaoTacQuanTrong01.action = 'FUNCTION.OBJECT.ASSIGN_NEW_ARRANG_POSITION'
                 col.scale_y = 1.5
 
                 col.separator()
 
-                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Bản Tham Chiếu (List Chọn)", icon='FILE_REFRESH')
-                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.SYNC_REFERENCE_OBJECT'
-                col.scale_y = 1.5
-
-                col.separator()
-
-                thaoTacQuanTrong03 = col.operator("vt.object_action", text="Vị Trí (Collection & Transform)", icon='ORIENTATION_GIMBAL')
-                thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.SYNC_OBJECT_POSITION_DATA'
+                thaoTacQuanTrong02 = col.operator("vt.object_action", text="Hủy Gán Vị Trí Sắp Xếp Mới", icon='ORIENTATION_GIMBAL')
+                thaoTacQuanTrong02.action = 'FUNCTION.OBJECT.CANCEL_ASSIGN_NEW_ARRANG_POSITION'
                 col.scale_y = 1.5
 
                 col.separator()

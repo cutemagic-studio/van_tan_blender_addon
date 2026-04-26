@@ -65,12 +65,50 @@ def make_root(context, force = False):
 
     for i, obj in enumerate(selected_objs):
 
+        # Kiểm Tra Object Có Đang Có Tham Chiếu Nào Không
+        exist_reference_object = check_exist_reference_object(context, obj)
+        if exist_reference_object != None:
+            # ----------
+            # ----------
+            # THÔNG BÁO - Start
+
+            # Chuẩn bị nội dung thông báo
+            msg = [
+                f"Tạo Bản Gốc Thất Bại [Id: {obj['CMC_Id']}]",
+                "Nguyên nhân: Bản Gốc Đang Có Tham Chiếu Sau:"
+                f"{exist_reference_object}"
+            ]
+            # Gọi hàm hiển thị Popup nổi bật
+            utils.show_detailed_message(msg, title="Có Gì Đó Xảy Ra!", icon='CHECKMARK')
+
+            # THÔNG BÁO _ Finish
+            # ----------
+            # ----------
+            return False
+
         # Nếu Object được tạo từ Shift D => force = true
         if force == False:
             # Nếu ID đã tồn tại và có giá trị lớn hơn 0, bỏ qua object này
             if "CMC_Id" in obj.keys() and obj["CMC_Id"] > 0:
                 print(f"Bỏ qua '{obj.name}': Đã có ID {obj['CMC_Id']}")
-                continue
+
+                # ----------
+                # ----------
+                # THÔNG BÁO - Start
+
+                # Chuẩn bị nội dung thông báo
+                msg = [
+                    f"Tạo Bản Gốc Thất Bại [Id: {obj['CMC_Id']}]",
+                    "Nguyên nhân: Bản Gốc Đã Được Tạo Trước Đó"
+                ]
+                # Gọi hàm hiển thị Popup nổi bật
+                utils.show_detailed_message(msg, title="Có Gì Đó Xảy Ra!", icon='CHECKMARK')
+
+                # THÔNG BÁO _ Finish
+                # ----------
+                # ----------
+
+                return False
 
         unique_id = generate_unique_id(i)
         
@@ -81,10 +119,10 @@ def make_root(context, force = False):
         obj["CMC_IsRootObject"] = True
         
         # 3. Thiết lập RootObjectId (Gán mặc định là -1 để chờ set sau)
-        obj["CMC_RootObjectId"] = -1
+        obj["CMC_RootObjectId"] = unique_id
 
         # 4. RootObjectName
-        obj["CMC_RootObjectName"] = ""
+        obj["CMC_RootObjectName"] = obj.name
 
         # 5. Đồng bộ hóa dữ liệu Object
         sync_object_data(context, obj)
@@ -109,11 +147,10 @@ def make_root(context, force = False):
 
         # Chuẩn bị nội dung thông báo
         msg = [
-            "Tạo Bản Gốc Thành Công",
-            f"Id: {obj['CMC_Id']}",
+            f"Tạo Bản Gốc Thành Công [Id: {obj['CMC_Id']}]",
         ]
         # Gọi hàm hiển thị Popup nổi bật
-        utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='CHECKMARK')
+        utils.show_detailed_message(msg, title="Thành Công Không Có Gì Sai!", icon='CHECKMARK')
 
         # THÔNG BÁO _ Finish
         # ----------
@@ -153,6 +190,20 @@ def sync_object_data(context, obj):
     obj["CMC_Transform_Z"] = objPosition.z
 
     return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____ Kiểm Tra Có Tham Chiếu Tồn Tại
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+def check_exist_reference_object(context, target_obj):
+    global reference_object_list
+    if target_obj.get("CMC_Id", "") and target_obj.get("CMC_IsRootObject", False) == True:
+        get_reference_object_list()
+        if len(reference_object_list) > 0:
+            for reference_object in reference_object_list:
+                if reference_object.get("CMC_RootObjectId") == target_obj.get("CMC_Id", ""):
+                    return f"Tên: {reference_object.name} [Id: {reference_object.get('CMC_Id')}]"
+
+    return None
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
@@ -719,21 +770,65 @@ def sync_reference_instance(reference_object, root_object):
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
-def clear_lastest_create():
+def clear_lastest_create(context):
 
     for root_object in root_object_list:
         root_object["CMC_IsLastestCreate"] = False
 
-    return True
-
-def make_lastest_create(object):
-
-    for root_object in root_object_list:
-        root_object["CMC_IsLastestCreate"] = False
-
-    object["CMC_IsLastestCreate"] = True
+    for reference_object in reference_object_list:
+        reference_object["CMC_IsLastestCreate"] = False
 
     return True
+
+def make_lastest_create(context):
+    active_obj = context.active_object
+
+    clear_lastest_create(context)
+
+    active_obj["CMC_IsLastestCreate"] = True
+
+    set_as_unique_anchor(context, active_obj)
+
+    return True
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def set_as_unique_anchor(context, target_obj):
+    """
+    Thiết lập một object làm điểm neo duy nhất, xóa bỏ các điểm neo cũ.
+    """
+    # 1. DỌN DẸP: Duyệt qua tất cả object trong cảnh
+    # Chỉ duyệt trong scene hiện tại để tối ưu hiệu suất
+    for obj in context.scene.objects:
+        obj.show_name = False
+        
+        # Nếu object nào đang có màu của "Điểm neo" cũ (màu xanh dương nhẹ/lá)
+        # thì reset về màu trắng mặc định (1, 1, 1, 1)
+        if obj.color[0:3] == (0.5, 0.9, 0.5) or obj.get("CMC_IsLastestCreate", False) == False: 
+            obj.color = (1.0, 1.0, 1.0, 1.0)
+
+    # 2. THIẾT LẬP NEO MỚI
+    if target_obj:
+        target_obj.show_name = True
+        # Dùng màu xanh lá nhẹ bạn thích (0.5, 0.9, 0.5)
+        target_obj.color = (0.5, 0.9, 0.5, 1.0)
+        
+        # Đặt nó làm Active Object để các công cụ sắp xếp biết đường mà "bám" vào
+        context.view_layer.objects.active = target_obj
+        
+        print(f"⚓ Đã đặt '{target_obj.name}' làm Điểm Neo duy nhất.")
+
+    # 3. CẬP NHẬT VIEWPORT (Force Shading Mode)
+    # Việc này giúp người dùng thấy ngay màu sắc mà không cần chỉnh tay
+    for area in context.screen.areas:
+        if area.type == 'VIEW_3D':
+            for space in area.spaces:
+                if space.type == 'VIEW_3D':
+                    # Chuyển chế độ hiển thị màu sang 'OBJECT'
+                    if space.shading.color_type != 'OBJECT':
+                        space.shading.color_type = 'OBJECT'
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
@@ -804,7 +899,7 @@ def sync_position(context):
 
         # 5. Sắp xếp
         cfg = context.scene.cmc_sorting_config
-        clear_lastest_create()
+        clear_lastest_create(context)
         logic.arrange_objects_grid(context, cfg, "+X++", True)
 
     # Đưa tất cả vào Collection 
@@ -813,8 +908,6 @@ def sync_position(context):
         for root_object in root_object_list:
             move_to_collection(root_object, library_scene_collection)
             sync_object_data(context,root_object)
-    
-        
 
     if len(reference_object_list) > 0:
         for reference_object in reference_object_list:

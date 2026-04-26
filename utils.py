@@ -133,8 +133,8 @@ def refresh_hud_data(obj, op_name="Update"):
     global hud_data
     if not obj: return
     
-    # 1. Tăng chỉ số, ép chỉ số cần cập nhật tăng lên
-    hud_data["neededRefreshIndexCount"] += 1
+    # 1. Reset
+    reset_hud_data(hud_data)
 
     # 2. Chủ động gọi hàm cập nhật dữ liệu luôn
     update_object_stats(bpy.context.scene)
@@ -219,6 +219,8 @@ def sync_hud_data(hud_data, obj):
     hud_data["CMC_Id"] = hud_data["props"].get("CMC_Id", "None")
     hud_data["CMC_IsRootObject"] = hud_data["props"].get("CMC_IsRootObject", False)
     
+    hud_data["CMC_RootObjectName"] = obj.get("CMC_RootObjectName")
+
     if hud_data["props"].get("CMC_IsRootObject", False) == False and hud_data["props"].get("CMC_RootObjectId", -1) != -1:
         hud_data["CMC_IsReferenceObject"] = True
     else:
@@ -286,7 +288,7 @@ def find_Reference_Object(hud_data):
         # Duyệt qua toàn bộ object trong file để tìm object có RootObjectId khớp với Id
         for object in bpy.data.objects:
             # Kiểm tra nếu object đó có ID và IsRootObject = True
-            if object.get("CMC_RootObjectId") == hud_data["CMC_Id"]:
+            if object.get("CMC_IsRootObject") == False and object.get("CMC_RootObjectId") == hud_data["CMC_Id"]:
                 reference_number += 1
 
     hud_data["CMC_ReferenceNumber"] = reference_number
@@ -365,6 +367,17 @@ def draw_callback_px(self, context):
             blf.color(font_id, 1.0, 0.8, 0.1, 1.0)
             blf.position(font_id, x_pos, y_pos, 0)
             blf.draw(font_id, f"Obj tham chiếu ({hud_data['CMC_RootObjectName']})")
+
+        if hud_data["CMC_RootObjectName"]:
+            y_pos -= 25
+            blf.color(font_id, 0.8, 0.8, 0.8, 1.0) 
+            blf.position(font_id, x_pos, y_pos, 0)
+            blf.draw(font_id, "Tên Prefab: ")
+            
+            text_width, text_height = blf.dimensions(font_id, "Tên Prefab: ")
+            blf.color(font_id, 0.9, 0.8, 0.2, 1.0)
+            blf.position(font_id, x_pos + text_width, y_pos, 0)
+            blf.draw(font_id, f"{hud_data['CMC_RootObjectName']}")
 
         y_pos -= 25
         blf.color(font_id, 0.5, 0.9, 0.5, 1.0)

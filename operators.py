@@ -545,6 +545,20 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
 
+        elif self.action == 'FUNCTION.OBJECT.ASSIGN_NEW_ARRANG_POSITION':
+            success = object_tools.make_lastest_create(context)
+            if success:
+                self.report({'INFO'}, "✅ Gán Vị Trí Sắp Xếp Mới Thành Công! (Danh Sách Chọn)")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+        elif self.action == 'FUNCTION.OBJECT.CANCEL_ASSIGN_NEW_ARRANG_POSITION':
+            success = object_tools.clear_lastest_create(context)
+            if success:
+                self.report({'INFO'}, "✅ Hủy Gán Vị Trí Sắp Xếp Thành Công! (Danh Sách Chọn)")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+
         elif self.action == 'FUNCTION.OBJECT.SYNC_OBJECT_NAME':
             success = object_tools.rename_with_smart_suffix(context)
             if success:

@@ -36,36 +36,6 @@ def arrange_objects_grid(context, config, direction='X++', is_make_lastest_creat
         if obj != active_obj:
             objs.append(obj)
 
-    # ----------
-    # ---------- || ----------
-    # ---------- || ---------- || ----------
-    #  ĐÁNH DẤU OBJECT NEO - Start
-    # Tắt hiển thị tên của tất cả object cũ để tránh rối
-    for o in bpy.data.objects:
-        o.show_name = False
-
-    # Bật hiển thị tên và highlight cho object neo (số 1)
-    anchor_obj = objs[0]
-    anchor_obj.show_name = True 
-    # Bạn có thể đổi tên tạm thời để nó hiện chữ "NEO" thay vì tên gốc
-    # anchor_obj.name = "NEO_" + anchor_obj.name 
-    
-    # Đổi màu Object Neo (RGBA)
-    anchor_obj.color = (0.5, 0.9, 0.5, 1.0) 
-    # Kích hoạt chế độ hiển thị màu Object trong Viewport (nếu chưa bật)
-    for area in bpy.context.screen.areas:
-        if area.type == 'VIEW_3D':
-            for space in area.spaces:
-                if space.type == 'VIEW_3D':
-                    space.shading.color_type = 'OBJECT'
-
-
-    #  ĐÁNH DẤU OBJECT NEO - Finish
-    # ---------------------------
-    # ---------- || ---------- || ----------
-    # ---------- || ----------
-    # ----------
-
     print(f"Bắt đầu sắp xếp hướng: {direction}")
 
     # Lấy object đầu tiên làm mốc vị trí (Gốc của ngăn xếp) 
@@ -127,6 +97,7 @@ def arrange_objects_grid(context, config, direction='X++', is_make_lastest_creat
 
             if is_make_lastest_create == True and i == (len(objs) - 1):
                 obj["CMC_IsLastestCreate"] = True
+                object_tools.set_as_unique_anchor(context, obj)
 
     elif direction == '+Z++' or direction == '-Z--':
         # Khoảng cách bước nhảy
