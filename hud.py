@@ -431,12 +431,25 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 col.operator("vt.object_action", text="Tạo Bản Tham Chiếu", icon='RESTRICT_SELECT_OFF').action = 'FUNCTION.OBJECT.MAKE_REFERENCE_OBJECT'
                 col.scale_y = 1.2
 
-            if ui.show_identity_sub:
+            # 
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_clear_data_group else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_clear_data_group", text="Xóa Dữ Liệu", icon='TRASH', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+
+            if ui.show_clear_data_group:
                 col = sub_box.column(align=True)
                 # col.separator()
                 col.operator("vt.object_action", text="Xóa Dữ Liệu Object", icon='TRASH').action = 'FUNCTION.OBJECT.CLEAR_OBJECT_DATA'
                 col.scale_y = 0.8
 
+            if ui.show_clear_data_group:
+                col = sub_box.column(align=True)
+                # col.separator()
+                col.operator("vt.object_action", text="Xóa Dữ Liệu Object (Danh Sách Chọn)", icon='TRASH').action = 'FUNCTION.OBJECT.CLEAR_OBJECT_DATA_FOR_LIST'
+                col.scale_y = 0.8
 
             # --- LEVEL 2: NHÓM CON 2 (Sync & Clean) --- 
             sub_box = main_box.box()
@@ -477,7 +490,13 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
                 col.separator()
 
-                thaoTacQuanTrong04 = col.operator("vt.object_action", text="Đồng Bộ Tên", icon='ORIENTATION_GIMBAL')
+                thaoTacQuanTrong03 = col.operator("vt.object_action", text="Đưa Pivot Point Xuống Bottom", icon='DOWNARROW_HLT')
+                thaoTacQuanTrong03.action = 'FUNCTION.OBJECT.MOVE_PIVOT_POINT_TO_BOTTOM'
+                col.scale_y = 1.5
+
+                col.separator()
+
+                thaoTacQuanTrong04 = col.operator("vt.object_action", text="Đồng Bộ Tên", icon='ALIGN_BOTTOM')
                 thaoTacQuanTrong04.action = 'FUNCTION.OBJECT.SYNC_OBJECT_NAME'
                 col.scale_y = 1.5
 

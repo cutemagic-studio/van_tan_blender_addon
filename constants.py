@@ -122,6 +122,8 @@ class VT_UI_Settings(bpy.types.PropertyGroup):
     # Toggle cho các nhóm chính
     show_object_group : bpy.props.BoolProperty(name="Object Database", default=True) # type: ignore
     
+    show_clear_data_group : bpy.props.BoolProperty(name="Xóa Dữ Liệu", default=False) # type: ignore
+
     # Toggle cho các nhóm con bên trong (Sub-menus)
     show_identity_sub : bpy.props.BoolProperty(name="Identity Setup", default=True) # type: ignore
     show_sync_sub : bpy.props.BoolProperty(name="Sync & Clean", default=False) # type: ignore

@@ -225,7 +225,47 @@ def clear_object_data(context):
         # ---------- 
         return False
 
+def clear_selected_objects_data(context):
+    # 1. Lấy danh sách tất cả các object đang chọn
+    selected_objs = context.selected_objects
+    active_obj = context.active_object
 
+    # Kiểm tra nếu không có gì được chọn
+    if not selected_objs:
+        msg = ["Chưa chọn bất kỳ Object nào trong Scene để Clear Data!"]
+        utils.show_detailed_message(msg, title="Có Gì Đó Sai Sai!", icon='ERROR')
+        return False
+
+    count = 0
+    # 2. Vòng lặp xử lý từng object
+    for obj in selected_objs:
+        # Lấy danh sách keys và ép kiểu list để tránh lỗi "dictionary changed size during iteration"
+        keys = list(obj.keys())
+        
+        if keys:
+            for key in keys:
+                # Xóa sạch các Custom Properties
+                del obj[key]
+            count += 1
+            print(f"✅ Đã xóa sạch Custom Properties của {obj.name}")
+
+    # 3. THÔNG BÁO TỔNG HỢP (Hiện một lần duy nhất cho tất cả)
+    if count > 0:
+        msg = [
+            f"Đã dọn dẹp xong {count} Object(s).",
+            f"Toàn bộ Custom Properties đã bị xóa sạch.",
+            "Sẵn sàng cho các thiết lập mới!"
+        ]
+        utils.show_detailed_message(msg, title="Dọn Dẹp Thành Công!", icon='TRASH')
+    else:
+        msg = ["Các Object được chọn vốn đã 'sạch' (không có dữ liệu ẩn)."]
+        utils.show_detailed_message(msg, title="Thông Tin", icon='INFO')
+
+    # 4. Cập nhật HUD cho Object Active (Để UI hiển thị đúng trạng thái mới nhất)
+    if active_obj:
+        utils.refresh_hud_data(active_obj, op_name="CLEAR SELECTED")
+
+    return True
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____ Đồng bộ hóa dữ liệu Object
@@ -772,6 +812,23 @@ def sync_all_data(context):
 
     sync_position(context)
 
+    # ----------
+    # ----------
+    # THÔNG BÁO - Start
+
+    # Chuẩn bị nội dung thông báo
+    msg = [
+        f"Đồng Bộ Hóa Thành Công",
+        f"+ Object Gốc: {len(root_object_list)}",
+        f"+ Object Tham Chiếu: {len(reference_object_list)}"
+    ]
+    # Gọi hàm hiển thị Popup nổi bật
+    utils.show_detailed_message(msg, title="Thành Công Không Có Gì Sai!", icon='CHECKMARK')
+
+    # THÔNG BÁO _ Finish
+    # ----------
+    # ----------  
+
     return True
 
 reference_object_list = []
@@ -973,8 +1030,6 @@ def sync_position(context):
         for reference_object in reference_object_list:
             move_to_collection(reference_object, demo_scene_collection)
             sync_object_data(context,reference_object)
-
-    print(f"OBJECT TẠO CUỐI CÙNG: {lastest_create_object.name} ; {len(root_object_not_in_library_collection_list)}")
 
     return True
 
@@ -1262,3 +1317,66 @@ def export_all_object_to_fbx(context, export_folder="G:/Blender_Export_Data_Json
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+
+def set_origin_to_bottom_center():
+    # 1. KIỂM TRA & LƯU TRẠNG THÁI
+    selected_objs = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
+    
+    if not selected_objs:
+        print("Không có Mesh object nào được chọn.")
+        return
+
+    # Lưu vị trí Cursor và Object Active ban đầu để khôi phục sau này
+    old_cursor_loc = bpy.context.scene.cursor.location.copy()
+    old_active = bpy.context.view_layer.objects.active
+
+    # Chuyển sang Object Mode nếu đang ở Edit Mode
+    if bpy.context.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    # 2. XỬ LÝ TỪNG VẬT THỂ
+    for obj in selected_objs:
+        # Cô lập object để lệnh origin_set hoạt động chính xác
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+
+        # Tính toán Bottom Center dựa trên Bounding Box (Nhanh và chính xác)
+        # BBox lấy tọa độ Local, nhân với Matrix_World để ra tọa độ World
+        mw = obj.matrix_world
+        bbox_world = [mw @ mathutils.Vector(v) for v in obj.bound_box]
+
+        # Tìm giới hạn Min/Max của các trục
+        x_coords = [v.x for v in bbox_world]
+        y_coords = [v.y for v in bbox_world]
+        z_coords = [v.z for v in bbox_world]
+
+        # Công thức trung điểm để lấy tâm chuẩn xác nhất
+        center_x = (min(x_coords) + max(x_coords)) / 2
+        center_y = (min(y_coords) + max(y_coords)) / 2
+        bottom_z = min(z_coords)
+
+        # Đặt Cursor về vị trí đáy vừa tính
+        bpy.context.scene.cursor.location = (center_x, center_y, bottom_z)
+
+        # Lệnh thần thánh: Di chuyển Origin về Cursor 
+        # (Blender tự tính toán offset cho Mesh để Object không bị nhảy vị trí)
+        bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+
+    # 3. HOÀN TÁC & KHÔI PHỤC
+    # Trả lại danh sách chọn ban đầu
+    for obj in selected_objs:
+        obj.select_set(True)
+    
+    bpy.context.view_layer.objects.active = old_active
+    bpy.context.scene.cursor.location = old_cursor_loc
+
+    print(f"✅ Đã đưa Pivot về đáy cho {len(selected_objs)} vật thể.")
+
+# Chạy thử hàm
+# set_origin_to_bottom_center()
+
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____|||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+

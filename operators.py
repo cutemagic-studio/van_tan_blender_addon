@@ -528,6 +528,12 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
                 self.report({'INFO'}, "✅ Xóa Dữ Liệu Object Thành Công!")
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+        elif self.action == 'FUNCTION.OBJECT.CLEAR_OBJECT_DATA_FOR_LIST':
+            success = object_tools.clear_selected_objects_data(context)
+            if success:
+                self.report({'INFO'}, "✅ Xóa Dữ Liệu Object Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
 
         #####
 
@@ -555,13 +561,20 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
         elif self.action == 'FUNCTION.OBJECT.ASSIGN_NEW_ARRANG_POSITION':
             success = object_tools.make_lastest_create(context)
             if success:
-                self.report({'INFO'}, "✅ Gán Vị Trí Sắp Xếp Mới Thành Công! (Danh Sách Chọn)")
+                self.report({'INFO'}, "✅ Gán Vị Trí Sắp Xếp Mới Thành Công!")
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
         elif self.action == 'FUNCTION.OBJECT.CANCEL_ASSIGN_NEW_ARRANG_POSITION':
             success = object_tools.clear_lastest_create(context)
             if success:
-                self.report({'INFO'}, "✅ Hủy Gán Vị Trí Sắp Xếp Thành Công! (Danh Sách Chọn)")
+                self.report({'INFO'}, "✅ Hủy Gán Vị Trí Sắp Xếp Thành Công!")
+            else:
+                self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
+
+        elif self.action == 'FUNCTION.OBJECT.MOVE_PIVOT_POINT_TO_BOTTOM':
+            success = object_tools.set_origin_to_bottom_center()
+            if success:
+                self.report({'INFO'}, "✅ Đưa Pivot Point Xuống Bottom Thành Công!")
             else:
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
 
