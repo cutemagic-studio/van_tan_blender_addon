@@ -468,7 +468,7 @@ def make_root_from_reference(context):
             f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
         ]
         # Gọi hàm hiển thị Popup nổi bật
-        utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='ERROR')
+        utils.show_detailed_message(msg, title="Có Gì Đó Xảy Ra!", icon='ERROR')
 
         # THÔNG BÁO _ Finish
         # ---------- || ---------- || ----------
@@ -494,7 +494,7 @@ def make_root_from_reference(context):
             f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
         ]
         # Gọi hàm hiển thị Popup nổi bật
-        utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='ERROR')
+        utils.show_detailed_message(msg, title="Có Gì Đó Xảy Ra!", icon='ERROR')
 
         # THÔNG BÁO _ Finish
         # ---------- || ---------- || ----------
@@ -541,7 +541,7 @@ def make_root_from_reference(context):
         f"Bản Tham Chiếu: [{other_obj['CMC_Id']}] - {other_obj.name}",
     ]
     # Gọi hàm hiển thị Popup nổi bật
-    utils.show_detailed_message(msg, title="Thông Báo Tối Thượng", icon='CHECKMARK')
+    utils.show_detailed_message(msg, title="Thành Công Không Có Gì Sai!", icon='CHECKMARK')
 
     # THÔNG BÁO _ Finish
     # ---------- || ---------- || ----------
@@ -1372,6 +1372,8 @@ def set_origin_to_bottom_center():
     bpy.context.scene.cursor.location = old_cursor_loc
 
     print(f"✅ Đã đưa Pivot về đáy cho {len(selected_objs)} vật thể.")
+
+    return True
 
 # Chạy thử hàm
 # set_origin_to_bottom_center()
