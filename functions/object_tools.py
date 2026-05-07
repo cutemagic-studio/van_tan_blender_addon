@@ -1121,7 +1121,8 @@ def export_position_data_to_json(context):
 
         # 3. Đóng gói dữ liệu
         data.append({
-            "name": obj.name.rsplit('.', 1)[0],
+            # "name": obj.name.rsplit('.', 1)[0],
+            "name": obj.name.replace('.', '_'),
             # Toạ độ đã đảo trục Blender (Z-up) -> Unity (Y-up) theo công thức của bạn
             "pos": {
                 "x": pos.x * (-1),
