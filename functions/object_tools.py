@@ -884,7 +884,7 @@ def get_reference_object_list():
     reference_object_list = []
     for object in bpy.data.objects:
         # Kiểm tra nếu object đó có ID và IsRootObject == False và CMC_RootObjectId != -1
-        if object.get("CMC_Id") != "" and object.get("CMC_IsRootObject") == False and object.get("CMC_RootObjectId") != -1:
+        if object.get("CMC_Id") != "" and object.get("CMC_IsRootObject") == False:
             reference_object_list.append(object)
 
     # Sắp Xếp Theo Thứ Tự Tăng Dần Của ID
@@ -943,7 +943,7 @@ def sync_reference_instance(reference_object, root_object):
 
     CMC_Ref_RootObjectInstance = reference_object.get("CMC_RootObjectInstance")
     if CMC_Ref_RootObjectInstance:
-        reference_object["CMC_RootObjectId"] = CMC_Ref_RootObjectInstance.get("CMC_RootObjectId", -1)
+        reference_object["CMC_RootObjectId"] = CMC_Ref_RootObjectInstance.get("CMC_Id", -2)
 
     return True
 
@@ -1076,7 +1076,8 @@ def sync_position(context):
 
         # 4. Chọn danh sách các object khác (Vật thể có viền cam)
         for obj in root_object_not_in_library_collection_list:
-            obj.select_set(True)
+            if obj.name in context.view_layer.objects:
+                obj.select_set(True)
 
         # 5. Sắp xếp
         cfg = context.scene.cmc_sorting_config
@@ -1105,7 +1106,7 @@ def sync_position(context):
 def export_position_data_to_json(context):
 
     # Đường dẫn xuất file
-    output_path = "E:/Unity_Projects/My_First_Game/Assets/TestImportAssetFromBlender/Scripts/JSON_Data/positions.json"
+    output_path = "E:/Unity_Projects/VanTan_CuteMagic/Assets/Scripts/JSON_Data/positions.json"
     
     # Đảm bảo thư mục tồn tại
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -1277,7 +1278,7 @@ def rename_with_smart_suffix(context):
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
-def export_all_object_to_fbx(context, export_folder="G:/Blender_Export_Data_Json/"):
+def export_all_object_to_fbx(context, export_folder="E:/Unity_Projects/VanTan_CuteMagic/Assets/Models/"):
     # Đảm bảo thư mục tồn tại
     if not os.path.exists(export_folder):
         os.makedirs(export_folder)
