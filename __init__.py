@@ -64,6 +64,13 @@ def register():
     # Đây chính là lúc cái tên "cmc_sorting_config" được tạo ra
     bpy.types.Scene.cmc_sorting_config = bpy.props.PointerProperty(type=properties.CMC_SortingConfig)
 
+    # Định nghĩa thuộc tính cho toàn bộ Object type
+    # bpy.types.Object.CMC_RootObjectInstance = bpy.props.PointerProperty(
+    #     name="CMC_RootObjectInstance",
+    #     type=bpy.types.Object,
+    #     description="Reference to root object"
+    # )
+
     print("✅ Van Tan Tools đã được đăng ký!")
 
 def unregister():
@@ -89,6 +96,8 @@ def unregister():
     # 4. Gỡ đăng ký các class
     for cls in reversed(classes):
         bpy.utils.unregister_class(cls)
+
+    # del bpy.types.Object.CMC_RootObjectInstance
     
     print("❌ Van Tan Tools đã gỡ đăng ký!")
 

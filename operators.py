@@ -48,13 +48,16 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
             ##### [STATE_OBJECT] 
             elif self.state == constants.STATE_OBJECT:
 
-                ##### [] 
+                ##### []  
                 if event.type == constants.KEY_EXEC_1:
                     success = object_tools.make_root(context)
                     if success:
                         self.report({'INFO'}, "Make root successfully!")
                     else:
                         self.report({'WARNING'}, "Xảy ra lỗi!")
+
+                    # Cập nhật lại giao diện trước khi thoát
+                    context.area.tag_redraw() 
 
                     return self.finish(context)
                 
@@ -66,6 +69,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     else:
                         self.report({'WARNING'}, "Xảy ra lỗi!")
 
+                    # Cập nhật lại giao diện trước khi thoát
+                    context.area.tag_redraw() 
+
                     return self.finish(context)
                 
                 ##### [] 
@@ -75,6 +81,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                         self.report({'INFO'}, "Make root from reference successfully!")
                     else:
                         self.report({'WARNING'}, "Xảy ra lỗi!")
+
+                    # Cập nhật lại giao diện trước khi thoát
+                    context.area.tag_redraw() 
 
                     return self.finish(context)
 
@@ -86,6 +95,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     else:
                         self.report({'WARNING'}, "Xảy ra lỗi!")
 
+                    # Cập nhật lại giao diện trước khi thoát
+                    context.area.tag_redraw() 
+
                     return self.finish(context)
                 
                 ##### [] 
@@ -95,6 +107,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                         self.report({'INFO'}, "Đồng bộ hóa danh sách Obj root thành công!")
                     else:
                         self.report({'WARNING'}, "Đồng bộ hóa danh sách Obj root xảy ra lỗi!")
+
+                    # Cập nhật lại giao diện trước khi thoát
+                    context.area.tag_redraw() 
 
                     return self.finish(context)
                 
@@ -106,6 +121,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                     else:
                         self.report({'WARNING'}, "Đồng bộ hóa danh sách Obj tham chiếu xảy ra lỗi!")
 
+                    # Cập nhật lại giao diện trước khi thoát
+                    context.area.tag_redraw() 
+
                     return self.finish(context)
                 
                 ##### [] 
@@ -115,6 +133,9 @@ class OBJECT_OT_vt_ultimate_tool(bpy.types.Operator):
                         self.report({'INFO'}, "Đồng bộ hóa dữ liệu vị trí (Collection & Transform) thành công!")
                     else:
                         self.report({'WARNING'}, "Đồng bộ hóa dữ liệu vị trí (Collection & Transform) xảy ra lỗi!")
+
+                    # Cập nhật lại giao diện trước khi thoát
+                    context.area.tag_redraw() 
 
                     return self.finish(context)
 

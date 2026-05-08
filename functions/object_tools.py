@@ -57,7 +57,7 @@ def generate_unique_id(index_offset=0):
     return timestamp + index_offset
 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
-#|||||_____|||||_____
+#|||||_____|||||_____ 
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def make_root(context, force = False):
@@ -123,8 +123,16 @@ def make_root(context, force = False):
         # 3. Thiết lập RootObjectId (Gán mặc định là -1 để chờ set sau)
         obj["CMC_RootObjectId"] = unique_id
 
-        # 4. RootObjectName
-        obj["CMC_RootObjectName"] = obj.name
+        # 4. RootObjectInstance
+        obj["CMC_RootObjectInstance"] = obj
+
+        # 4.1 RootObjectName
+        CMC_RootObjectInstance = obj.get("CMC_RootObjectInstance")
+        if CMC_RootObjectInstance:
+            obj["CMC_RootObjectName"] = CMC_RootObjectInstance.name
+        else:
+            obj["CMC_RootObjectName"] = obj.name
+        
 
         # 5. Đồng bộ hóa dữ liệu Object
         sync_object_data(context, obj)
@@ -396,9 +404,16 @@ def make_reference_from_root(context):
     # --- TIẾN HÀNH CHUYỂN ĐỔI ---
 
     # A. Thiết lập cho BẢN GỐC (root_obj)
-    root_obj["CMC_IsRootObject"] = True
-    root_obj["CMC_RootObjectId"] = -1
-    root_obj["CMC_RootObjectName"] = root_obj.name # Lưu tên để Unity tìm prefab
+    CMC_Root_RootObjectInstance = root_obj.get("CMC_RootObjectInstance")
+    if CMC_Root_RootObjectInstance:
+        root_obj["CMC_IsRootObject"] = True
+        root_obj["CMC_RootObjectId"] = -1
+        root_obj["CMC_RootObjectName"] = CMC_Root_RootObjectInstance.name # Lưu tên để Unity tìm prefab
+    else:
+        root_obj["CMC_IsRootObject"] = True
+        root_obj["CMC_RootObjectId"] = -1
+        root_obj["CMC_RootObjectInstance"] = root_obj
+        root_obj["CMC_RootObjectName"] = root_obj.name # Lưu tên để Unity tìm prefab
     
     # Khóa UI cho bản Gốc
     root_obj.id_properties_ui("CMC_Id").update(min=shared_id, max=shared_id)
@@ -412,10 +427,19 @@ def make_reference_from_root(context):
     ref_obj.id_properties_ui("CMC_Id").update(min=0, max=2000000000) 
     
     ref_obj["CMC_Id"] = new_id_for_ref
-    ref_obj["CMC_IsRootObject"] = False
-    ref_obj["CMC_RootObjectId"] = shared_id # Trỏ về ID của bản Gốc
-    ref_obj["CMC_RootObjectName"] = root_obj.name # Lưu tên bản gốc để Unity biết cần spawn prefab nào
     
+    CMC_Root_RootObjectInstance = root_obj.get("CMC_RootObjectInstance")
+    if CMC_Root_RootObjectInstance:
+        ref_obj["CMC_IsRootObject"] = False
+        ref_obj["CMC_RootObjectId"] = CMC_Root_RootObjectInstance.get("CMC_Id", shared_id) # Trỏ về ID của bản Gốc
+        ref_obj["CMC_RootObjectName"] = CMC_Root_RootObjectInstance.name # Lưu tên bản gốc để Unity biết cần spawn prefab nào
+        ref_obj["CMC_RootObjectInstance"] = CMC_Root_RootObjectInstance
+    else:
+        ref_obj["CMC_IsRootObject"] = False
+        ref_obj["CMC_RootObjectId"] = shared_id # Trỏ về ID của bản Gốc
+        ref_obj["CMC_RootObjectName"] = root_obj.name # Lưu tên bản gốc để Unity biết cần spawn prefab nào
+        ref_obj["CMC_RootObjectInstance"] = root_obj
+
     # Khóa ID mới cho bản Tham chiếu
     ref_obj.id_properties_ui("CMC_Id").update(min=new_id_for_ref, max=new_id_for_ref)
     ref_obj.id_properties_ui("CMC_RootObjectId").update(min=shared_id, max=shared_id)
@@ -509,7 +533,8 @@ def make_root_from_reference(context):
     # Giữ nguyên ID cũ làm ID gốc
     active_obj["CMC_IsRootObject"] = True
     active_obj["CMC_RootObjectId"] = -1 # Root thì không tham chiếu ai cả
-    
+    active_obj["CMC_RootObjectInstance"] = active_obj
+
     # Cập nhật UI cho A_Root
     active_obj.id_properties_ui("CMC_Id").update(min=shared_id, max=shared_id)
     active_obj.id_properties_ui("CMC_IsRootObject").update(description="This is the Library Root")
@@ -521,9 +546,19 @@ def make_root_from_reference(context):
     # Trước khi đổi ID mới, phải reset khóa min/max cũ
     other_obj.id_properties_ui("CMC_Id").update(min=0, max=2000000000) 
     
-    other_obj["CMC_Id"] = new_id_for_a
-    other_obj["CMC_IsRootObject"] = False
-    other_obj["CMC_RootObjectId"] = shared_id # Tham chiếu về ID của A_Root
+    #
+    CMC_Root_RootObjectInstance = active_obj.get("CMC_RootObjectInstance")
+
+    if CMC_Root_RootObjectInstance:
+        other_obj["CMC_Id"] = new_id_for_a
+        other_obj["CMC_IsRootObject"] = False
+        other_obj["CMC_RootObjectId"] = CMC_Root_RootObjectInstance.get("CMC_Id", "Chưa Xác Định") # Tham chiếu về ID của A_Root
+        other_obj["CMC_RootObjectInstance"] = CMC_Root_RootObjectInstance
+    else:
+        other_obj["CMC_Id"] = new_id_for_a
+        other_obj["CMC_IsRootObject"] = False
+        other_obj["CMC_RootObjectId"] = active_obj.get("CMC_Id", "Chưa Xác Định") # Tham chiếu về ID của A_Root
+        other_obj["CMC_RootObjectInstance"] = active_obj
     
     # Khóa ID mới của A
     other_obj.id_properties_ui("CMC_Id").update(min=new_id_for_a, max=new_id_for_a)
@@ -572,6 +607,7 @@ def sync_reference_instances(context):
     
     # Lấy thông tin từ object đầu tiên làm mẫu để so sánh
     first_obj = selected_objs[0]
+    CMC_RootObjectInstance = first_obj.get("CMC_RootObjectInstance")
     
     # Kiểm tra xem có đủ các thuộc tính cần thiết không
     required_keys = ["CMC_Id", "CMC_IsRootObject", "CMC_RootObjectId"]
@@ -579,7 +615,10 @@ def sync_reference_instances(context):
         print("Lỗi: Object mẫu không có đủ thuộc tính ID/Root.")
         return False
 
-    reference_root_id = first_obj["CMC_RootObjectId"]
+    if CMC_RootObjectInstance:
+        reference_root_id = CMC_RootObjectInstance.get("CMC_Id", first_obj["CMC_RootObjectId"])
+    else:
+        reference_root_id = first_obj["CMC_RootObjectId"]
 
     for obj in selected_objs:
         # Điều kiện 1: Tất cả phải là Reference (IsRootObject = False)
@@ -599,12 +638,15 @@ def sync_reference_instances(context):
 
     # --- BƯỚC 2: TÌM TÊN CỦA ROOT OBJECT ---
     root_name_found = "Unknown_Root"
-    # Duyệt qua toàn bộ object trong file để tìm object có ID khớp với RootObjectId
-    for o in bpy.data.objects:
-        # Kiểm tra nếu object đó có ID và IsRootObject = True
-        if o.get("CMC_Id") == reference_root_id and (o.get("CMC_IsRootObject") is True or o.get("CMC_IsRootObject") == 1):
-            root_name_found = o.name
-            break
+    if CMC_RootObjectInstance:
+        root_name_found = CMC_RootObjectInstance.name
+    else:
+        # Duyệt qua toàn bộ object trong file để tìm object có ID khớp với RootObjectId
+        for o in bpy.data.objects:
+            # Kiểm tra nếu object đó có ID và IsRootObject = True
+            if o.get("CMC_Id") == reference_root_id and (o.get("CMC_IsRootObject") is True or o.get("CMC_IsRootObject") == 1):
+                root_name_found = o.name
+                break
     
     if root_name_found == "Unknown_Root":
         print(f"Cảnh báo: Không tìm thấy Root Object có ID {reference_root_id} trong file này.")
@@ -664,8 +706,13 @@ def sync_root_instances(context):
         is_root = obj.get("CMC_IsRootObject")
         
         if is_root is True or is_root == 1:
-            # Lấy tên hiện tại trong Outliner
-            current_name = obj.name
+            #
+            CMC_RootObjectInstance = obj.get("CMC_RootObjectInstance")
+            if CMC_RootObjectInstance:
+                current_name = CMC_RootObjectInstance.name
+            else:
+                # Lấy tên hiện tại trong Outliner
+                current_name = obj.name
             
             # Cập nhật vào thuộc tính RootObjectName
             if obj.get("CMC_RootObjectName") != current_name:
@@ -859,16 +906,25 @@ def get_root_object_list():
 
     return root_object_list
 
-#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
+#|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____ 
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def sync_root_instance(root_object):
-    root_object["CMC_RootObjectName"] = root_object.name
+    CMC_RootObjectInstance = root_object.get("CMC_RootObjectInstance")
+
+    if CMC_RootObjectInstance:
+        root_object["CMC_RootObjectName"] = CMC_RootObjectInstance.name
+    else:
+        root_object["CMC_RootObjectInstance"] = root_object
+        root_object["CMC_RootObjectName"] = root_object.name
 
     # Duyệt Qua Danh Sách Object Tham Chiếu Để Đồng Bộ
     for reference_object in reference_object_list:
-        if reference_object.get("CMC_RootObjectId", -1) == root_object.get("CMC_Id"):
+        if reference_object.get("CMC_RootObjectInstance") == root_object:
+            sync_reference_instance(reference_object, root_object)
+
+        elif reference_object.get("CMC_RootObjectId", -1) == root_object.get("CMC_Id"):
             sync_reference_instance(reference_object, root_object)
 
     return True
@@ -878,8 +934,16 @@ def sync_root_instance(root_object):
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 
 def sync_reference_instance(reference_object, root_object):
+    CMC_Ref_RootObjectInstance = reference_object.get("CMC_RootObjectInstance")
+    if CMC_Ref_RootObjectInstance:
+        reference_object["CMC_RootObjectName"] = CMC_Ref_RootObjectInstance.name
+    else:
+        reference_object["CMC_RootObjectInstance"] = root_object
+        reference_object["CMC_RootObjectName"] = root_object.get("CMC_RootObjectName", root_object.name)
 
-    reference_object["CMC_RootObjectName"] = root_object["CMC_RootObjectName"]
+    CMC_Ref_RootObjectInstance = reference_object.get("CMC_RootObjectInstance")
+    if CMC_Ref_RootObjectInstance:
+        reference_object["CMC_RootObjectId"] = CMC_Ref_RootObjectInstance.get("CMC_RootObjectId", -1)
 
     return True
 
