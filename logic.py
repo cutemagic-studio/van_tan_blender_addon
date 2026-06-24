@@ -27,6 +27,8 @@ def arrange_objects_grid(context, config, direction='X++', is_make_lastest_creat
     active_obj = context.active_object
     selected_objs = context.selected_objects
 
+    selected_objs = sorted(selected_objs, key=lambda obj: obj.location.x)
+
     if not active_obj or len(selected_objs) < 2:
         return
 

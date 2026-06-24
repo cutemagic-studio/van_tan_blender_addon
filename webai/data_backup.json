@@ -1,0 +1,369 @@
+{
+    "$device_id": "019ce4d0-17c1-7e50-a01d-043624e94949",
+    "distinct_id": "1e5d73cf-ba8f-44d1-a339-3d826326e871",
+    "$sesid": [
+        1778467095187,
+        "019e14b3-e70b-752c-8c60-887f15bc2329",
+        1778463794954
+    ],
+    "$epp": true,
+    "$initial_person_info": {
+        "r": "https://www.youtube.com/",
+        "u": "https://studio.tripo3d.ai/?utm_source=google&utm_medium=pmax&utm_campaign=1202signup&utm_term=&gad_source=2&gad_campaignid=23315142921&gclid=CjwKCAjwyMnNBhBNEiwA-Kcgu_A3ZWxc4xlg-0wDxOdEgQCiioHWGOKnFax2BYRjI3YNwOXWjNLzeBoC43QQAvD_BwE&category=featured&model_type=all&recommended=recommended&use_case=all"
+    },
+    "$user_state": "identified",
+    "$initialization_time": "2026-05-11T02:32:39.265Z",
+    "$configured_session_timeout_ms": 1800000,
+    "$session_recording_remote_config": {
+        "cache_timestamp": 1778466759397,
+        "enabled": true,
+        "canvasFps": 3,
+        "canvasQuality": "0.4",
+        "consoleLogRecordingEnabled": true,
+        "endpoint": "/s/",
+        "eventTriggers": [],
+        "linkedFlag": null,
+        "masking": null,
+        "minimumDurationMilliseconds": null,
+        "networkPayloadCapture": {
+            "capturePerformance": {
+                "network_timing": true,
+                "web_vitals": true,
+                "web_vitals_allowed_metrics": null
+            }
+        },
+        "recordCanvas": true,
+        "recorderVersion": "v2",
+        "sampleRate": null,
+        "scriptConfig": {
+            "script": "posthog-recorder"
+        },
+        "triggerMatchType": null,
+        "urlBlocklist": [],
+        "urlTriggers": [],
+        "version": 1,
+        "canvasRecording": {
+            "enabled": true,
+            "fps": 3,
+            "quality": "0.4"
+        }
+    },
+    "$autocapture_disabled_server_side": false,
+    "$heatmaps_enabled_server_side": true,
+    "$product_tours_enabled_server_side": false,
+    "$web_vitals_enabled_server_side": true,
+    "$web_vitals_allowed_metrics": null,
+    "$exception_capture_enabled_server_side": false,
+    "$error_tracking_suppression_rules": [],
+    "$dead_clicks_enabled_server_side": false,
+    "$client_session_props": {
+        "sessionId": "019e14b3-e70b-752c-8c60-887f15bc2329",
+        "props": {
+            "r": "$direct",
+            "u": "https://studio.tripo3d.ai/home?from=landingpage"
+        }
+    },
+    "$feature_flag_errors": [],
+    "$active_feature_flags": [
+        "Onboarding_Pricing",
+        "Try_ultra",
+        "SmartMesh_Free_Try",
+        "text2model",
+        "usePayPal",
+        "image_optimization_home",
+        "increase_payment",
+        "studio-home-page",
+        "zone_pricing",
+        "Home_Poly",
+        "upgrade_banner",
+        "export_limit",
+        "beta-v3-1"
+    ],
+    "$enabled_feature_flags": {
+        "Onboarding_Pricing": "control",
+        "Try_ultra": "control",
+        "SmartMesh_Free_Try": "test",
+        "Smart_Mesh_Beta": false,
+        "text2model": true,
+        "usePayPal": true,
+        "image_optimization_home": "control",
+        "increase_payment": "test1",
+        "studio-home-page": "test",
+        "zone_pricing": "test",
+        "Home_Poly": "test",
+        "upgrade_banner": "test",
+        "export_limit": "test_B",
+        "beta-v3-1": "test"
+    },
+    "$feature_flag_payloads": {},
+    "$feature_flag_details": {
+        "Onboarding_Pricing": {
+            "key": "Onboarding_Pricing",
+            "enabled": true,
+            "variant": "control",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 532891,
+                "version": 7,
+                "description": null,
+                "payload": null
+            }
+        },
+        "Try_ultra": {
+            "key": "Try_ultra",
+            "enabled": true,
+            "variant": "control",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 233856,
+                "version": 6,
+                "description": null,
+                "payload": null
+            }
+        },
+        "SmartMesh_Free_Try": {
+            "key": "SmartMesh_Free_Try",
+            "enabled": true,
+            "variant": "test",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 630710,
+                "version": 3,
+                "description": null,
+                "payload": null
+            }
+        },
+        "Smart_Mesh_Beta": {
+            "key": "Smart_Mesh_Beta",
+            "enabled": false,
+            "variant": null,
+            "reason": {
+                "code": "no_condition_match",
+                "condition_index": 0,
+                "description": "No matching condition set"
+            },
+            "metadata": {
+                "id": 586238,
+                "version": 73,
+                "description": null,
+                "payload": null
+            }
+        },
+        "text2model": {
+            "key": "text2model",
+            "enabled": true,
+            "variant": null,
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 650980,
+                "version": 4,
+                "description": null,
+                "payload": null
+            }
+        },
+        "usePayPal": {
+            "key": "usePayPal",
+            "enabled": true,
+            "variant": null,
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 658847,
+                "version": 1,
+                "description": null,
+                "payload": null
+            }
+        },
+        "image_optimization_home": {
+            "key": "image_optimization_home",
+            "enabled": true,
+            "variant": "control",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 247021,
+                "version": 1,
+                "description": null,
+                "payload": null
+            }
+        },
+        "increase_payment": {
+            "key": "increase_payment",
+            "enabled": true,
+            "variant": "test1",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 410689,
+                "version": 2,
+                "description": null,
+                "payload": null
+            }
+        },
+        "studio-home-page": {
+            "key": "studio-home-page",
+            "enabled": true,
+            "variant": "test",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 170329,
+                "version": 28,
+                "description": null,
+                "payload": null
+            }
+        },
+        "zone_pricing": {
+            "key": "zone_pricing",
+            "enabled": true,
+            "variant": "test",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 351888,
+                "version": 8,
+                "description": null,
+                "payload": null
+            }
+        },
+        "Home_Poly": {
+            "key": "Home_Poly",
+            "enabled": true,
+            "variant": "test",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 584162,
+                "version": 5,
+                "description": null,
+                "payload": null
+            }
+        },
+        "upgrade_banner": {
+            "key": "upgrade_banner",
+            "enabled": true,
+            "variant": "test",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 372959,
+                "version": 10,
+                "description": null,
+                "payload": null
+            }
+        },
+        "export_limit": {
+            "key": "export_limit",
+            "enabled": true,
+            "variant": "test_B",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 439051,
+                "version": 5,
+                "description": null,
+                "payload": null
+            }
+        },
+        "beta-v3-1": {
+            "key": "beta-v3-1",
+            "enabled": true,
+            "variant": "test",
+            "reason": {
+                "code": "condition_match",
+                "condition_index": 0,
+                "description": "Matched condition set 1"
+            },
+            "metadata": {
+                "id": 580469,
+                "version": 35,
+                "description": null,
+                "payload": null
+            }
+        }
+    },
+    "$feature_flag_request_id": "f14bb5b6-2970-4458-adc2-20f28c3428e8",
+    "$feature_flag_evaluated_at": 1778467059945,
+    "$capture_rate_limit": {
+        "tokens": 99,
+        "last": 1778467095186
+    },
+    "$user_id": "1e5d73cf-ba8f-44d1-a339-3d826326e871",
+    "$stored_person_properties": {
+        "userId": "1e5d73cf-ba8f-44d1-a339-3d826326e871",
+        "createdAt": "",
+        "updatedAt": "",
+        "status": "",
+        "workStatus": "",
+        "email": "studyforfuturevantan@gmail.com",
+        "gender": "",
+        "emailVerified": false,
+        "phoneVerified": false,
+        "userSourceType": "",
+        "type": "basic",
+        "free_trial": false,
+        "start_time": "2026-05-08T11:04:28Z",
+        "end_time": "2037-10-04T02:04:28Z",
+        "valid_until": ""
+    },
+    "$flag_call_reported": {
+        "Onboarding_Pricing": [
+            "control"
+        ],
+        "Home_Poly": [
+            "test"
+        ],
+        "SmartMesh_Free_Try": [
+            "undefined",
+            "test"
+        ],
+        "text2model": [
+            "undefined",
+            "true"
+        ],
+        "usePayPal": [
+            "undefined",
+            "true"
+        ]
+    }
+}
