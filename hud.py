@@ -541,6 +541,69 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
             # --- CHÈN CONFIG VÀO ĐÂY ---
             cfg = context.scene.cmc_sorting_config
+
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_can_chinh_theo_truc_z else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_can_chinh_theo_truc_z", text="Căn chỉnh theo trục Z", icon='LINENUMBERS_ON', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_can_chinh_theo_truc_z:
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong01a = col.operator("vt.object_action", text="Center Between (Z)", icon='BACK')
+                thaoTacQuanTrong02a = col.operator("vt.object_action", text="Array By Distance (Z)", icon='BACK')
+                thaoTacQuanTrong03a = col.operator("vt.object_action", text="Align XY (Keep Z)", icon='BACK')
+                thaoTacQuanTrong04a = col.operator("vt.object_action", text="--", icon='BACK')
+
+                thaoTacQuanTrong01a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CENTER_BETWEEN.Z'
+                thaoTacQuanTrong02a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRAY_BY_DISTANCE.Z'
+                thaoTacQuanTrong03a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.Align_XY_Keep.Z'
+                thaoTacQuanTrong04a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.--'
+                
+                col.scale_y = 1.5
+            #
+
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_can_chinh_theo_truc_x else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_can_chinh_theo_truc_x", text="Căn chỉnh theo trục X", icon='LINENUMBERS_ON', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_can_chinh_theo_truc_x:
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong01b = col.operator("vt.object_action", text="Center Between (X)", icon='BACK')
+                thaoTacQuanTrong02b = col.operator("vt.object_action", text="Array By Distance (X)", icon='BACK')
+                thaoTacQuanTrong03b = col.operator("vt.object_action", text="Align YZ (Keep X)", icon='BACK')
+                thaoTacQuanTrong04b = col.operator("vt.object_action", text="--", icon='BACK')
+
+                thaoTacQuanTrong01b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CENTER_BETWEEN.X'
+                thaoTacQuanTrong02b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRAY_BY_DISTANCE.X'
+                thaoTacQuanTrong03b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.Align_XY_Keep.X'
+                thaoTacQuanTrong04b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.--'
+                
+                col.scale_y = 1.5
+            #
+
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_can_chinh_theo_truc_y else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_can_chinh_theo_truc_y", text="Căn chỉnh theo trục Y", icon='LINENUMBERS_ON', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+            
+            if ui.show_can_chinh_theo_truc_y:
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong01c = col.operator("vt.object_action", text="Center Between (Y)", icon='BACK')
+                thaoTacQuanTrong02c = col.operator("vt.object_action", text="Array By Distance (Y)", icon='BACK')
+                thaoTacQuanTrong03c = col.operator("vt.object_action", text="Align XZ (Keep Y)", icon='BACK')
+                thaoTacQuanTrong04c = col.operator("vt.object_action", text="--", icon='BACK')
+
+                thaoTacQuanTrong01c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CENTER_BETWEEN.Y'
+                thaoTacQuanTrong02c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRAY_BY_DISTANCE.Y'
+                thaoTacQuanTrong03c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.Align_XY_Keep.Y'
+                thaoTacQuanTrong04c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.--'
+                
+                col.scale_y = 1.5
+            #
             
             settings_box = main_box.box()
             settings_box.label(text="Config Sắp Xếp Trục Ngang (XY):", icon='LINENUMBERS_ON')

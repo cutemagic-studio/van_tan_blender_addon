@@ -174,3 +174,32 @@ def arrange_objects_grid(context, config, direction='X++', is_make_lastest_creat
 
             # Áp dụng vị trí
             obj.location = origin_loc + offset
+
+
+def arrange_only(context, config, direction='Z', alignMethod=''):
+
+    if alignMethod == 'CENTER_BETWEEN':
+        if direction == 'Z':
+            return
+        elif direction == 'X':
+            return
+        elif direction == 'Y':
+            return
+
+    elif alignMethod == 'ARRAY_BY_DISTANCE':
+        if direction == 'Z':
+            return
+        elif direction == 'X':
+            return
+        elif direction == 'Y':
+            return
+
+    elif alignMethod == 'Align_XY_Keep':
+        if direction == 'Z':
+            return
+        elif direction == 'X':
+            return
+        elif direction == 'Y':
+            return
+
+    return

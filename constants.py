@@ -131,6 +131,10 @@ class VT_UI_Settings(bpy.types.PropertyGroup):
 
     # Thêm biến này để điều khiển dropdown thứ 2
     show_arrange_group : bpy.props.BoolProperty(default=False) # type: ignore
+    show_can_chinh_theo_truc_z : bpy.props.BoolProperty(name="show_can_chinh_theo_truc_z", default=False) # type: ignore
+    show_can_chinh_theo_truc_x : bpy.props.BoolProperty(name="show_can_chinh_theo_truc_x", default=False) # type: ignore
+    show_can_chinh_theo_truc_y : bpy.props.BoolProperty(name="show_can_chinh_theo_truc_y", default=False) # type: ignore
+
     # Đặt Obj vào ngăn xếp theo Hàng/Cột một cách tuần tự:
     show_into_current_stack_sub : bpy.props.BoolProperty(name="show_into_current_stack_sub", default=False) # type: ignore
         # Theo Hàng:
