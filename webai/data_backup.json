@@ -75,7 +75,7 @@
         "studio-home-page",
         "zone_pricing",
         "Home_Poly",
-        "upgrade_banner",
+        "upgrade_banner__",
         "export_limit",
         "beta-v3-1"
     ],
@@ -91,7 +91,7 @@
         "studio-home-page": "test",
         "zone_pricing": "test",
         "Home_Poly": "test",
-        "upgrade_banner": "test",
+        "upgrade_banner__": "test",
         "export_limit": "test_B",
         "beta-v3-1": "test"
     },
@@ -273,8 +273,8 @@
                 "payload": null
             }
         },
-        "upgrade_banner": {
-            "key": "upgrade_banner",
+        "upgrade_banner__": {
+            "key": "upgrade_banner__",
             "enabled": true,
             "variant": "test",
             "reason": {

@@ -661,9 +661,6 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
         
         if "FUNCTION.OBJECT.ARRANGE_ONLY" in self.action:
             print("FUNCTION.OBJECT.ARRANGE_ONLY")
-
-            # Lấy danh sách object (theo thứ tự chọn là tốt nhất)
-            cfg = context.scene.cmc_sorting_config
             
             active_obj = context.active_object
             selected_objs = context.selected_objects
@@ -674,10 +671,10 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
 
             # Gọi logic xử lý hướng (Lấy phần cuối của chuỗi action)
             direction = self.action.split('.')[-1] 
-            alignMethod = self.action.split('.')[-1] 
-            logic.arrange_only(context, cfg, direction, alignMethod)
+            alignMethod = self.action.split('.')[-2]
+            logic.arrange_only(self, context, direction, alignMethod)
             
-            self.report({'INFO'}, f"Đã sắp xếp theo hướng {direction}")
+            # self.report({'INFO'}, f"Đã sắp xếp theo hướng {direction} - {alignMethod}")
     
 
         return {'FINISHED'}

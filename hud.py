@@ -544,6 +544,36 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
             sub_box = main_box.box()
             sub_row = sub_box.row(align=True)
+            sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_can_chinh_theo_truc_xyz else 'DISCLOSURE_TRI_RIGHT'
+            sub_row.prop(ui, "show_can_chinh_theo_truc_xyz", text="Căn chỉnh theo trục XYZ", icon='LINENUMBERS_ON', emboss=False)
+            sub_row.label(text="", icon=sub_icon)
+
+            if ui.show_can_chinh_theo_truc_z:
+                col = sub_box.column(align=True)
+                thaoTacQuanTrong01d = col.operator("vt.object_action", text="Fit Uniform (XYZ)", icon='BACK')
+                thaoTacQuanTrong02d = col.operator("vt.object_action", text="Smart Diagonal Step (XYZ)", icon='BACK')
+                thaoTacQuanTrong03d = col.operator("vt.object_action", text="Interpolated Stair Distribution (XYZ)", icon='BACK')
+                thaoTacQuanTrong04d = col.operator("vt.object_action", text="Fill Wall Box with Bricks (XYZ)", icon='BACK')
+                thaoTacQuanTrong04d1 = col.operator("vt.object_action", text="Fill L-Wall Box with Bricks A (XYZ)", icon='BACK')
+                thaoTacQuanTrong04d2 = col.operator("vt.object_action", text="Fill L-Wall Box with Bricks B (XYZ)", icon='BACK')
+                thaoTacQuanTrong05d = col.operator("vt.object_action", text="Fill Circle Bounds with Bricks (XYZ)", icon='BACK')
+                thaoTacQuanTrong06d = col.operator("vt.object_action", text="Yin-Yang Roof Tiles (XYZ)", icon='BACK')
+
+                thaoTacQuanTrong01d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FIT_UNIFORM.Z'
+                thaoTacQuanTrong02d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SMART_STEP_DISTRIBUTE.Z'
+                thaoTacQuanTrong03d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SMART_STEP_DISTRIBUTE_2.Z'
+                thaoTacQuanTrong04d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_BOX.Z'
+                thaoTacQuanTrong04d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_BOX_LEAVE_TEETH.Z'
+                thaoTacQuanTrong04d2.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_BOX_FILL_TEETH.Z'
+                thaoTacQuanTrong05d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CIRCLE_BOUNDS.Z'
+                thaoTacQuanTrong06d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_ROOF_YIN_YANG.Z'
+
+
+                col.scale_y = 1.5
+            #
+
+            sub_box = main_box.box()
+            sub_row = sub_box.row(align=True)
             sub_icon = 'DISCLOSURE_TRI_DOWN' if ui.show_can_chinh_theo_truc_z else 'DISCLOSURE_TRI_RIGHT'
             sub_row.prop(ui, "show_can_chinh_theo_truc_z", text="Căn chỉnh theo trục Z", icon='LINENUMBERS_ON', emboss=False)
             sub_row.label(text="", icon=sub_icon)
@@ -553,13 +583,32 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong01a = col.operator("vt.object_action", text="Center Between (Z)", icon='BACK')
                 thaoTacQuanTrong02a = col.operator("vt.object_action", text="Array By Distance (Z)", icon='BACK')
                 thaoTacQuanTrong03a = col.operator("vt.object_action", text="Align XY (Keep Z)", icon='BACK')
-                thaoTacQuanTrong04a = col.operator("vt.object_action", text="--", icon='BACK')
+                thaoTacQuanTrong04a = col.operator("vt.object_action", text="Match Transform (Z)", icon='BACK')
+                thaoTacQuanTrong05a = col.operator("vt.object_action", text="Right Isosceles Triangle (Z)", icon='BACK')
+                thaoTacQuanTrong06a = col.operator("vt.object_action", text="Opposite Flatten (Z)", icon='BACK')
+                thaoTacQuanTrong07a = col.operator("vt.object_action", text="Opposite Not Flatten (Z)", icon='BACK')
+                thaoTacQuanTrong08a = col.operator("vt.object_action", text="Reset To Zero Base Active (Z)", icon='BACK')
+                thaoTacQuanTrong09a = col.operator("vt.object_action", text="Reset To Zero (Z)", icon='BACK')
+                thaoTacQuanTrong10a = col.operator("vt.object_action", text="Snapping (Z)", icon='BACK')
+                thaoTacQuanTrong11a = col.operator("vt.object_action", text="Align To Face Center (Z)", icon='BACK')
+                thaoTacQuanTrong12a = col.operator("vt.object_action", text="Measure Distance (Z)", icon='BACK')
+                thaoTacQuanTrong13a = col.operator("vt.object_action", text="Stretch to Fit Gap (Z)", icon='BACK')
+
 
                 thaoTacQuanTrong01a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CENTER_BETWEEN.Z'
                 thaoTacQuanTrong02a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRAY_BY_DISTANCE.Z'
-                thaoTacQuanTrong03a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.Align_XY_Keep.Z'
-                thaoTacQuanTrong04a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.--'
-                
+                thaoTacQuanTrong03a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ALIGN_KEEP.Z'
+                thaoTacQuanTrong04a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.MATCH_TRANSFORM.Z'
+                thaoTacQuanTrong05a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RIGHT_ISOSCELES_TRIANGLE.Z'
+                thaoTacQuanTrong06a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.OPPOSITE.Z'
+                thaoTacQuanTrong07a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.OPPOSITE_NOT_FLATTEN.Z'
+                thaoTacQuanTrong08a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RESET_TO_ZERO_BASE_ACTIVE.Z'
+                thaoTacQuanTrong09a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RESET_TO_ZERO.Z'
+                thaoTacQuanTrong10a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SNAP_TO_BOUNDS.Z'
+                thaoTacQuanTrong11a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ALIGN_TO_SURFACE.Z'
+                thaoTacQuanTrong12a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.MEASURE_DISTANCE.Z'
+                thaoTacQuanTrong13a.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.STRETCH_TO_FIT_GAP.Z'
+
                 col.scale_y = 1.5
             #
 
@@ -574,13 +623,31 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong01b = col.operator("vt.object_action", text="Center Between (X)", icon='BACK')
                 thaoTacQuanTrong02b = col.operator("vt.object_action", text="Array By Distance (X)", icon='BACK')
                 thaoTacQuanTrong03b = col.operator("vt.object_action", text="Align YZ (Keep X)", icon='BACK')
-                thaoTacQuanTrong04b = col.operator("vt.object_action", text="--", icon='BACK')
+                thaoTacQuanTrong04b = col.operator("vt.object_action", text="Match Transform (X)", icon='BACK')
+                thaoTacQuanTrong05b = col.operator("vt.object_action", text="Right Isosceles Triangle (X)", icon='BACK')
+                thaoTacQuanTrong06b = col.operator("vt.object_action", text="Opposite Flatten (X)", icon='BACK')
+                thaoTacQuanTrong07b = col.operator("vt.object_action", text="Opposite Not Flatten (X)", icon='BACK')
+                thaoTacQuanTrong08b = col.operator("vt.object_action", text="Reset To Zero Base Active (X)", icon='BACK')
+                thaoTacQuanTrong09b = col.operator("vt.object_action", text="Reset To Zero (X)", icon='BACK')
+                thaoTacQuanTrong10b = col.operator("vt.object_action", text="Snapping (X)", icon='BACK')
+                thaoTacQuanTrong11b = col.operator("vt.object_action", text="Align To Face Center (X)", icon='BACK')
+                thaoTacQuanTrong12b = col.operator("vt.object_action", text="Measure Distance (X)", icon='BACK')
+                thaoTacQuanTrong13b = col.operator("vt.object_action", text="Stretch to Fit Gap (X)", icon='BACK')
 
                 thaoTacQuanTrong01b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CENTER_BETWEEN.X'
                 thaoTacQuanTrong02b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRAY_BY_DISTANCE.X'
-                thaoTacQuanTrong03b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.Align_XY_Keep.X'
-                thaoTacQuanTrong04b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.--'
-                
+                thaoTacQuanTrong03b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ALIGN_KEEP.X'
+                thaoTacQuanTrong04b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.MATCH_TRANSFORM.X'
+                thaoTacQuanTrong05b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RIGHT_ISOSCELES_TRIANGLE.X'
+                thaoTacQuanTrong06b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.OPPOSITE.X'
+                thaoTacQuanTrong07b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.OPPOSITE_NOT_FLATTEN.X'
+                thaoTacQuanTrong08b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RESET_TO_ZERO_BASE_ACTIVE.X'
+                thaoTacQuanTrong09b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RESET_TO_ZERO.X'
+                thaoTacQuanTrong10b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SNAP_TO_BOUNDS.X'
+                thaoTacQuanTrong11b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ALIGN_TO_SURFACE.X'
+                thaoTacQuanTrong12b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.MEASURE_DISTANCE.X'
+                thaoTacQuanTrong13b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.STRETCH_TO_FIT_GAP.X'
+
                 col.scale_y = 1.5
             #
 
@@ -595,13 +662,29 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong01c = col.operator("vt.object_action", text="Center Between (Y)", icon='BACK')
                 thaoTacQuanTrong02c = col.operator("vt.object_action", text="Array By Distance (Y)", icon='BACK')
                 thaoTacQuanTrong03c = col.operator("vt.object_action", text="Align XZ (Keep Y)", icon='BACK')
-                thaoTacQuanTrong04c = col.operator("vt.object_action", text="--", icon='BACK')
+                thaoTacQuanTrong04c = col.operator("vt.object_action", text="Match Transform (Y)", icon='BACK')
+                thaoTacQuanTrong05c = col.operator("vt.object_action", text="Right Isosceles Triangle (Y)", icon='BACK')
+                thaoTacQuanTrong06c = col.operator("vt.object_action", text="Opposite Flatten (Y)", icon='BACK')
+                thaoTacQuanTrong07c = col.operator("vt.object_action", text="Opposite Not Flatten (Y)", icon='BACK')
+                thaoTacQuanTrong09c = col.operator("vt.object_action", text="Reset To Zero (Y)", icon='BACK')
+                thaoTacQuanTrong10c = col.operator("vt.object_action", text="Snapping (Y)", icon='BACK')
+                thaoTacQuanTrong11c = col.operator("vt.object_action", text="Align To Face Center (Y)", icon='BACK')
+                thaoTacQuanTrong12c = col.operator("vt.object_action", text="Measure Distance (Y)", icon='BACK')
+                thaoTacQuanTrong13c = col.operator("vt.object_action", text="Stretch to Fit Gap (Y)", icon='BACK')
 
                 thaoTacQuanTrong01c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CENTER_BETWEEN.Y'
                 thaoTacQuanTrong02c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRAY_BY_DISTANCE.Y'
-                thaoTacQuanTrong03c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.Align_XY_Keep.Y'
-                thaoTacQuanTrong04c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.--'
-                
+                thaoTacQuanTrong03c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ALIGN_KEEP.Y'
+                thaoTacQuanTrong04c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.MATCH_TRANSFORM.Y'
+                thaoTacQuanTrong05c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RIGHT_ISOSCELES_TRIANGLE.Y'
+                thaoTacQuanTrong06c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.OPPOSITE.Y'
+                thaoTacQuanTrong07c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.OPPOSITE_NOT_FLATTEN.Y'
+                thaoTacQuanTrong09c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.RESET_TO_ZERO.Y'
+                thaoTacQuanTrong10c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SNAP_TO_BOUNDS.Y'
+                thaoTacQuanTrong11c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ALIGN_TO_SURFACE.Y'
+                thaoTacQuanTrong12c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.MEASURE_DISTANCE.Y'
+                thaoTacQuanTrong13c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.STRETCH_TO_FIT_GAP.Y'
+
                 col.scale_y = 1.5
             #
             
