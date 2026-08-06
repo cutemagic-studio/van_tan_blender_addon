@@ -556,8 +556,24 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong04d = col.operator("vt.object_action", text="Fill Wall Box with Bricks (XYZ)", icon='BACK')
                 thaoTacQuanTrong04d1 = col.operator("vt.object_action", text="Fill L-Wall Box with Bricks A (XYZ)", icon='BACK')
                 thaoTacQuanTrong04d2 = col.operator("vt.object_action", text="Fill L-Wall Box with Bricks B (XYZ)", icon='BACK')
+                thaoTacQuanTrong04d3 = col.operator("vt.object_action", text="fill_stone_wall_advanced (XYZ)", icon='BACK')
                 thaoTacQuanTrong05d = col.operator("vt.object_action", text="Fill Circle Bounds with Bricks (XYZ)", icon='BACK')
+                thaoTacQuanTrong05d1 = col.operator("vt.object_action", text="FILL_PAVEMENT_STYLIZED (XYZ)", icon='BACK')
                 thaoTacQuanTrong06d = col.operator("vt.object_action", text="Yin-Yang Roof Tiles (XYZ)", icon='BACK')
+                thaoTacQuanTrong07d = col.operator("vt.object_action", text="ARRANGE_ON_CURVE (XYZ)", icon='BACK')
+                thaoTacQuanTrong08d = col.operator("vt.object_action", text="FILL_CANOPY (XYZ)", icon='BACK')
+                thaoTacQuanTrong09d = col.operator("vt.object_action", text="FILL_CIRCULAR_PAVEMENT (XYZ)", icon='BACK')
+                thaoTacQuanTrong10d = col.operator("vt.object_action", text="FILL_STONE_HOUSE (XYZ)", icon='BACK')
+                thaoTacQuanTrong10d1 = col.operator("vt.object_action", text="FILL_CORNER_PILLARS (XYZ)", icon='BACK')
+                thaoTacQuanTrong10d2 = col.operator("vt.object_action", text="FILL_WALL_ACCENTS (XYZ)", icon='BACK')
+
+                thaoTacQuanTrong11d = col.operator("vt.object_action", text="FILL_STONE_HOUSE_V2 (XYZ)", icon='BACK')
+                thaoTacQuanTrong11d1 = col.operator("vt.object_action", text="FILL_CORNER_PILLARS_V2 (XYZ)", icon='BACK')
+                thaoTacQuanTrong11d2 = col.operator("vt.object_action", text="FILL_WALL_ACCENTS_V2 (XYZ)", icon='BACK')
+
+                thaoTacQuanTrong12d = col.operator("vt.object_action", text="FILL_STYLIZED_ROOF (XYZ)", icon='BACK')
+
+                thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
                 thaoTacQuanTrong01d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FIT_UNIFORM.Z'
                 thaoTacQuanTrong02d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SMART_STEP_DISTRIBUTE.Z'
@@ -565,8 +581,25 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong04d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_BOX.Z'
                 thaoTacQuanTrong04d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_BOX_LEAVE_TEETH.Z'
                 thaoTacQuanTrong04d2.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_BOX_FILL_TEETH.Z'
+                thaoTacQuanTrong04d3.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_STONE_WALL_STYLIZED.Z'
                 thaoTacQuanTrong05d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CIRCLE_BOUNDS.Z'
+                thaoTacQuanTrong05d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_PAVEMENT_STYLIZED.Z'
                 thaoTacQuanTrong06d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_ROOF_YIN_YANG.Z'
+                thaoTacQuanTrong07d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRANGE_ON_CURVE.Z'
+                thaoTacQuanTrong08d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CANOPY.Z'
+                thaoTacQuanTrong09d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CIRCULAR_PAVEMENT.Z'
+
+                thaoTacQuanTrong10d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_STONE_HOUSE.Z'
+                thaoTacQuanTrong10d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CORNER_PILLARS.Z'
+                thaoTacQuanTrong10d2.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_ACCENTS.Z'
+
+                thaoTacQuanTrong11d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_STONE_HOUSE_V2.Z'
+                thaoTacQuanTrong11d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CORNER_PILLARS_V2.Z'
+                thaoTacQuanTrong11d2.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_ACCENTS_V2.Z'
+
+                thaoTacQuanTrong12d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_STYLIZED_ROOF.Z'
+
+                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CREATE_STYLIZED_TREE.Z'
 
 
                 col.scale_y = 1.5

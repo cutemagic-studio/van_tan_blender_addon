@@ -1,7 +1,10 @@
 import bpy
 import math
 import random
+import bmesh
+from . import logic_upgrade
 from mathutils import Vector, Quaternion, Matrix
+from mathutils.bvhtree import BVHTree
 from .functions import object_tools
 
 # Xóa bỏ các dòng import math hay Vector ở giữa file hoặc trong hàm
@@ -235,7 +238,7 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
             step_z = obj_b.location.z - obj_a.location.z
             obj_c.location.z = obj_b.location.z + step_z
 
-            # 3. ĐỒNG BỘ 2 TRỤC CÒN LẠI (X, Y) theo vật thể B
+            # 3. ĐỒNG BỘ 2 TRỤC CÒI LẠI (X, Y) theo vật thể B
             obj_c.location.x = obj_b.location.x
             obj_c.location.y = obj_b.location.y
 
@@ -1228,20 +1231,14 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
             current_min_x = w_min_x - row_offset
             current_max_x = w_max_x
 
-            # TẠO RĂNG LƯỢC Ở CUỐI TƯỜNG (Để nối tường thứ 2)
+            # LẤP RĂNG LƯỢC Ở ĐẦU TƯỜNG Và Ở CUỐI TƯỜNG
             if mode == 'LEAVE_TEETH':
-                # Hàng chẵn (0, 2, 4): Gạch đi hết biên
-                # Hàng lẻ (1, 3, 5): Gạch dừng lại sớm 1 khoảng = độ dày tường
-                if row_idx % 2 != 0:
-                    current_max_x = w_max_x - wall_d
-
-            # LẤP RĂNG LƯỢC Ở ĐẦU TƯỜNG (Dành cho bức tường thứ 2)
-            elif mode == 'FILL_TEETH':
                 # Hàng chẵn: Bắt đầu lùi lại để nhường chỗ cho răng lược tường 1
                 if row_idx % 2 == 0:
                     current_min_x = w_min_x
                 else:
                     current_min_x = w_min_x - wall_d
+                    current_max_x = w_max_x - wall_d
 
             curr_x = current_min_x
 
@@ -1325,18 +1322,12 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
             current_min_x = w_min_x - row_offset
             current_max_x = w_max_x
 
-            # TẠO RĂNG LƯỢC Ở CUỐI TƯỜNG (Để nối tường thứ 2)
-            if mode == 'LEAVE_TEETH':
-                # Hàng chẵn (0, 2, 4): Gạch đi hết biên
-                # Hàng lẻ (1, 3, 5): Gạch dừng lại sớm 1 khoảng = độ dày tường
-                if row_idx % 2 != 0:
-                    current_max_x = w_max_x - wall_d
-
             # LẤP RĂNG LƯỢC Ở ĐẦU TƯỜNG (Dành cho bức tường thứ 2)
-            elif mode == 'FILL_TEETH':
+            if mode == 'FILL_TEETH':
                 # Hàng chẵn: Bắt đầu lùi lại để nhường chỗ cho răng lược tường 1
                 if row_idx % 2 == 0:
                     current_min_x = w_min_x
+
                 else:
                     current_min_x = w_min_x - wall_d
 
@@ -1383,9 +1374,362 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         context.view_layer.update()
         return
 
+    elif alignMethod == 'FILL_STONE_WALL_STYLIZED':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            fill_stone_wall_advanced(self, context, active_obj, bricks)
+        return
 
+    elif alignMethod == 'FILL_PAVEMENT_STYLIZED':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            fill_pavement_advanced(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'ARRANGE_ON_CURVE':
+        active_obj = context.active_object
+        target_objs = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and active_obj.type == 'CURVE' and target_objs:
+            arrange_on_curve(self, context, target_objs, active_obj)
+        return
+
+    elif alignMethod == 'FILL_CANOPY':
+        active_obj = context.active_object
+        leaves = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and leaves:
+            # Sử dụng hàm nâng cấp từ logic_upgrade
+            logic_upgrade.fill_canopy_stylized_v2(self, context, active_obj, leaves, density_factor=0.5)
+        return
+
+    elif alignMethod == 'create_stylized_bear':
+        create_stylized_bear(context)
+
+    elif alignMethod == 'FILL_CIRCULAR_PAVEMENT':
+        # Mặc định inner_r=1.2, outer_r=4.0 như trong sơ đồ
+        active_obj = context.active_object
+        if active_obj:
+            logic_upgrade.fill_circular_pavement(self, context, active_obj, inner_r=12, outer_r=40)
+        return
+
+    elif alignMethod == 'FILL_STONE_HOUSE':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            logic_upgrade.generate_stone_house(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'FILL_CORNER_PILLARS':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            logic_upgrade.generate_corner_pillars(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'FILL_WALL_ACCENTS':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            logic_upgrade.generate_wall_accents(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'FILL_CORNER_PILLARS_V2':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            logic_upgrade.generate_corner_pillars_v2(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'FILL_WALL_ACCENTS_V2':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            logic_upgrade.generate_wall_accents_v2(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'FILL_STONE_HOUSE_V2':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            logic_upgrade.generate_stone_house_v2(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'CREATE_STYLIZED_TREE':
+        logic_upgrade.create_stylized_tree(self, context)
+        return
+
+    elif alignMethod == 'FILL_STYLIZED_ROOF':
+        active_obj = context.active_object
+        tiles = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and tiles:
+            logic_upgrade.generate_stylized_roof(self, context, active_obj, tiles)
+        return
 
     return
+
+def fill_stone_wall_advanced(self, context, active_obj, bricks):
+    """
+    Lấp đầy đá vào khối Mesh uốn lượn (Stylized Stone Wall).
+    Dùng BVHTree để check Inside và tìm Normal để xoay đá.
+    """
+    if not active_obj or not bricks:
+        return
+
+    # 1. TẠO BVH TREE TỪ MESH CỦA ACTIVE OBJECT
+    depsgraph = context.view_layer.depsgraph
+    eval_obj = active_obj.evaluated_get(depsgraph)
+    mesh_data = eval_obj.to_mesh()
+    
+    bm = bmesh.new()
+    bm.from_mesh(mesh_data)
+    bm.transform(active_obj.matrix_world) # Chuyển sang World Space
+    bvh = BVHTree.FromBMesh(bm)
+    
+    # 2. THÔNG SỐ TƯỜNG & ĐÁ
+    wall_bounds = get_world_bounds(active_obj)
+    min_v = Vector((wall_bounds['x'][0], wall_bounds['y'][0], wall_bounds['z'][0]))
+    max_v = Vector((wall_bounds['x'][1], wall_bounds['y'][1], wall_bounds['z'][1]))
+    
+    avg_w = sum(b.dimensions.x for b in bricks) / len(bricks)
+    avg_h = sum(b.dimensions.z for b in bricks) / len(bricks)
+    
+    MAX_GAP = 0.02
+    new_bricks = []
+    
+    curr_z = min_v.z
+    row_idx = 0
+    
+    # Chúng ta quét một lưới XY bao quanh BBox của tường
+    # Tường có độ dày (Y axis), ta sẽ tìm điểm trên bề mặt Y để đặt đá
+    
+    while curr_z < max_v.z:
+        row_h = avg_h * random.uniform(0.95, 1.05)
+        if curr_z + row_h > max_v.z: row_h = max_v.z - curr_z
+        
+        row_offset = (avg_w * 0.5) if row_idx % 2 != 0 else 0
+        curr_x = min_v.x - row_offset
+        
+        while curr_x < max_v.x:
+            # Điểm trung tâm dự kiến của viên gạch
+            sample_pos = Vector((curr_x + avg_w/2, (min_v.y + max_v.y)/2, curr_z + row_h/2))
+            
+            # Tìm điểm gần nhất trên Mesh để gạch "hít" vào bề mặt
+            nearest_pos, normal, face_idx, dist = bvh.find_nearest(sample_pos)
+            
+            if dist is not None and dist < (max_v.y - min_v.y):
+                source = random.choice(bricks)
+                target_w = source.dimensions.x * random.uniform(0.8, 1.2)
+                
+                new_b = source.copy()
+                new_b.data = source.data.copy()
+                context.collection.objects.link(new_b)
+                new_bricks.append(new_b)
+                
+                # VỊ TRÍ: Đưa về điểm trên bề mặt
+                new_b.location = nearest_pos
+                
+                # XOAY: Xoay theo Normal của mặt tường
+                # Giả định đá mẫu có mặt trước hướng trục Y+
+                align_quat = normal.to_track_quat('Y', 'Z')
+                new_b.rotation_euler = align_quat.to_euler()
+                
+                # Random xoay nhẹ để tự nhiên
+                new_b.rotation_euler.y += random.uniform(-0.1, 0.1)
+                new_b.rotation_euler.z += random.uniform(-0.05, 0.05)
+                
+                # SCALE
+                new_b.scale.x *= (target_w / source.dimensions.x)
+                new_b.scale.z *= (row_h / source.dimensions.z)
+                
+                # Cập nhật curr_x
+                curr_x += target_w + random.uniform(0, MAX_GAP)
+            else:
+                curr_x += avg_w * 0.5 # Nhảy bước nếu không chạm mesh
+            
+            if len(new_bricks) > 4000: break
+            
+        curr_z += row_h
+        row_idx += 1
+        if len(new_bricks) > 4000: break
+
+    bm.free()
+    eval_obj.to_mesh_clear()
+    context.view_layer.update()
+    
+    self.report({'INFO'}, f"Đã tạo {len(new_bricks)} viên đá stylized ôm theo tường uốn lượn.")
+
+def arrange_on_curve(self, context, target_objs, curve_obj):
+    """
+    Sắp xếp vật thể dọc theo đường cong (Curve).
+    """
+    # 1. TẠO SAMPLER EMPTY (Tối ưu: tạo 1 lần dùng cho cả vòng lặp)
+    temp_empty = bpy.data.objects.new("Temp_Sampler", None)
+    context.collection.objects.link(temp_empty)
+    constraint = temp_empty.constraints.new('FOLLOW_PATH')
+    constraint.target = curve_obj
+    constraint.use_fixed_location = True # Sửa lỗi ở đây: dùng use_fixed_location thay vì use_path
+
+    def get_curve_data(factor):
+        constraint.offset_factor = max(0.0, min(1.0, factor))
+        context.view_layer.update()
+        pos = temp_empty.matrix_world.to_translation()
+        
+        # Tính Tangent (hướng tiến)
+        delta = 0.001
+        constraint.offset_factor = max(0.0, factor - delta)
+        context.view_layer.update()
+        pos_prev = temp_empty.matrix_world.to_translation()
+        
+        tangent = (pos - pos_prev).normalized()
+        if tangent.length < 0.0001:
+            constraint.offset_factor = min(1.0, factor + delta)
+            context.view_layer.update()
+            pos_next = temp_empty.matrix_world.to_translation()
+            tangent = (pos_next - pos).normalized()
+        return pos, tangent
+
+    # 2. TÍNH CHIỀU DÀI
+    curve_length = 0
+    for spline in curve_obj.data.splines:
+        curve_length += spline.calc_length()
+    if curve_length == 0: curve_length = 1.0
+
+    # 3. THỰC THI
+    if len(target_objs) == 1:
+        # TRƯỜNG HỢP 1: Nhân bản 1 vật mẫu
+        source = target_objs[0]
+        obj_dim = get_world_dimensions(source)
+        step_len = obj_dim.y if obj_dim.y > 0 else 1.0
+        
+        count = max(2, int(curve_length / step_len))
+        for i in range(count):
+            factor = i / (count - 1)
+            pos, tangent = get_curve_data(factor)
+            
+            new_obj = source.copy()
+            new_obj.data = source.data.copy()
+            context.collection.objects.link(new_obj)
+            
+            new_obj.location = pos
+            new_obj.rotation_mode = 'QUATERNION'
+            new_obj.rotation_quaternion = tangent.to_track_quat('Y', 'Z')
+    else:
+        # TRƯỜNG HỢP 2: Dàn danh sách hiện có
+        count = len(target_objs)
+        for i, obj in enumerate(target_objs):
+            factor = i / (count - 1)
+            pos, tangent = get_curve_data(factor)
+            
+            obj.location = pos
+            obj.rotation_mode = 'QUATERNION'
+            obj.rotation_quaternion = tangent.to_track_quat('Y', 'Z')
+
+    # DỌN DẸP
+    bpy.data.objects.remove(temp_empty, do_unlink=True)
+    self.report({'INFO'}, "Đã hoàn thành bố trí trên đường cong.")
+
+def fill_pavement_advanced(self, context, active_obj, bricks):
+    """
+    Lát đá nền trên diện tích đa giác (Polygon Pavement) - Phiên bản Ngăn nắp.
+    Dùng Raycast để lấp đầy diện tích bên trong đa giác với khoảng hở cố định 1cm.
+    """
+    if not active_obj or not bricks:
+        return
+
+    depsgraph = context.view_layer.depsgraph
+    
+    # 1. THÔNG SỐ PLANE & ĐÁ
+    bounds = get_world_bounds(active_obj)
+    min_x, max_x = bounds['x']
+    min_y, max_y = bounds['y']
+    min_z, max_z = bounds['z']
+    
+    GAP = 0.01 # Khoảng cách cố định 1cm
+    avg_w = sum(b.dimensions.x for b in bricks) / len(bricks)
+    avg_l = sum(b.dimensions.y for b in bricks) / len(bricks)
+    
+    new_stones = []
+    curr_y = min_y
+    row_idx = 0
+    
+    # 2. TẠM ẨN CÁC VIÊN ĐÁ MẪU
+    original_hides = {obj: obj.hide_get() for obj in bricks}
+    for obj in bricks: obj.hide_set(True)
+    context.view_layer.update()
+
+    try:
+        while curr_y < max_y:
+            # Chiều cao hàng ổn định (có một chút biến động nhẹ để tự nhiên)
+            row_h = avg_l * random.uniform(0.9, 1.1)
+            if curr_y + row_h > max_y: row_h = max_y - curr_y
+            
+            # Sole (Staggered) - Dịch chuyển hàng lẻ
+            row_offset = (avg_w * 0.5) if row_idx % 2 != 0 else 0
+            curr_x = min_x - row_offset
+            
+            while curr_x < max_x:
+                # Kiểm tra điểm tâm dự kiến
+                check_pos = Vector((curr_x + avg_w/2, curr_y + row_h/2, max_z + 1.0))
+                ray_dir = Vector((0, 0, -1))
+                
+                success, hit_loc, normal, face_idx, hit_obj, matrix = context.scene.ray_cast(
+                    depsgraph, check_pos, ray_dir
+                )
+                
+                if success and hit_obj == active_obj:
+                    source = random.choice(bricks)
+                    
+                    # Tính toán scale để khớp chiều cao hàng
+                    s_y = row_h / source.dimensions.y
+                    
+                    # Chiều rộng sau khi scale Y (giả sử scale đồng nhất ban đầu)
+                    scaled_w = source.dimensions.x * s_y
+                    
+                    new_s = source.copy()
+                    new_s.data = source.data.copy()
+                    context.collection.objects.link(new_s)
+                    new_stones.append(new_s)
+                    
+                    # THIẾT LẬP SCALE: Khớp Y với hàng, X giữ tỉ lệ hoặc ngẫu nhiên nhẹ
+                    new_s.scale.y *= s_y
+                    # Bù trừ X một chút để lấp đầy tốt hơn
+                    s_x_rand = random.uniform(0.9, 1.1)
+                    new_s.scale.x *= (s_y * s_x_rand)
+                    
+                    # Cập nhật kích thước thực sau scale
+                    actual_w = source.dimensions.x * new_s.scale.x / source.scale.x
+                    
+                    # VỊ TRÍ (Căn giữa hàng và cột, bám sát GAP)
+                    new_s.location = hit_loc
+                    
+                    # XOAY: Vuông vức 90 độ + jitter cực nhỏ
+                    angles = [0, math.pi/2, math.pi, 3*math.pi/2]
+                    base_rot = random.choice(angles)
+                    jitter = math.radians(random.uniform(-1, 1))
+                    
+                    align_quat = normal.to_track_quat('Z', 'Y')
+                    new_s.rotation_euler = align_quat.to_euler()
+                    new_s.rotation_euler.z += (base_rot + jitter)
+                    
+                    # Nhảy bước tiếp theo: Chiều rộng thực + GAP
+                    curr_x += actual_w + GAP
+                else:
+                    # Nếu không chạm, nhảy một bước nhỏ để tìm điểm tiếp theo
+                    curr_x += avg_w * 0.2
+                
+                if len(new_stones) > 6000: break
+                
+            curr_y += row_h + GAP # Hàng tiếp theo cách hàng cũ 1 GAP
+            row_idx += 1
+            if len(new_stones) > 6000: break
+            
+    finally:
+        for obj, hidden in original_hides.items():
+            obj.hide_set(hidden)
+        context.view_layer.update()
+
+    self.report({'INFO'}, f"Đã lát ngăn nắp {len(new_stones)} viên đá (Gap 1cm).")
 
 def get_world_bounds(obj):
     """Trả về tọa độ Min và Max của vật thể trong không gian thế giới (World Space)"""
@@ -1400,3 +1744,136 @@ def get_world_bounds(obj):
     max_z = max(c.z for c in world_coords)
 
     return {"x": (min_x, max_x), "y": (min_y, max_y), "z": (min_z, max_z)}
+
+def get_or_create_material(name, color):
+    """Lấy material đã có hoặc tạo mới với màu chỉ định"""
+    mat = bpy.data.materials.get(name)
+    if mat is None:
+        mat = bpy.data.materials.new(name=name)
+        mat.use_nodes = True
+        nodes = mat.node_tree.nodes
+        # Tìm node Principled BSDF
+        bsdf = nodes.get("Principled BSDF")
+        if bsdf:
+            bsdf.inputs[0].default_value = color
+    return mat
+
+def create_stylized_bear(context):
+    """Dựng hình chú gấu Stylized từ các khối Mesh cơ bản"""
+    # 1. THIẾT LẬP MÀU SẮC (RGBA)
+    fur_color = (0.35, 0.2, 0.1, 1.0)      # Nâu
+    snout_color = (0.85, 0.75, 0.55, 1.0) # Kem
+    clothes_color = (0.2, 0.4, 0.8, 1.0)  # Xanh dương
+    black_color = (0.02, 0.02, 0.02, 1.0) # Đen
+    white_color = (0.9, 0.9, 0.9, 1.0)    # Trắng
+
+    mat_fur = get_or_create_material("Mat_Bear_Fur", fur_color)
+    mat_snout = get_or_create_material("Mat_Bear_Snout", snout_color)
+    mat_clothes = get_or_create_material("Mat_Bear_Clothes", clothes_color)
+    mat_black = get_or_create_material("Mat_Black", black_color)
+    mat_white = get_or_create_material("Mat_White", white_color)
+
+    # 2. TẠO EMPTY ĐỂ LÀM GỐC (Root)
+    bear_root = bpy.data.objects.new("Stylized_Bear_Root", None)
+    context.collection.objects.link(bear_root)
+    bear_root.location = context.scene.cursor.location
+
+    def add_part(name, loc, sc, mat, rotation=(0, 0, 0)):
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0)
+        obj = context.active_object
+        obj.name = name
+        obj.location = bear_root.location + Vector(loc)
+        obj.scale = Vector(sc)
+        obj.rotation_euler = [math.radians(r) for r in rotation]
+        obj.data.materials.append(mat)
+        obj.parent = bear_root
+        # Làm mượt (Smooth Shade)
+        bpy.ops.object.shade_smooth()
+        return obj
+
+    # 3. DỰNG CÁC BỘ PHẬN
+    # Thân (Mặc yếm xanh)
+    body = add_part("Bear_Body", (0, 0, 0.7), (0.8, 0.75, 0.9), mat_clothes)
+    
+    # Đầu (Nâu)
+    head = add_part("Bear_Head", (0, 0.1, 1.8), (0.75, 0.7, 0.7), mat_fur)
+    
+    # Tai
+    ear_l = add_part("Bear_Ear_L", (0.5, 0.2, 2.3), (0.2, 0.1, 0.2), mat_fur, (0, 30, 0))
+    ear_r = add_part("Bear_Ear_R", (-0.5, 0.2, 2.3), (0.2, 0.1, 0.2), mat_fur, (0, -30, 0))
+    
+    # Mõm (Kem)
+    snout = add_part("Bear_Snout", (0, 0.6, 1.7), (0.35, 0.35, 0.3), mat_snout)
+    
+    # Mũi (Đen)
+    nose = add_part("Bear_Nose", (0, 0.9, 1.75), (0.08, 0.08, 0.06), mat_black)
+
+    # Mắt
+    eye_l = add_part("Bear_Eye_L", (0.25, 0.7, 1.95), (0.07, 0.05, 0.08), mat_black)
+    eye_r = add_part("Bear_Eye_R", (-0.25, 0.7, 1.95), (0.07, 0.05, 0.08), mat_black)
+
+    # Tay
+    arm_l = add_part("Bear_Arm_L", (0.85, 0.2, 1.1), (0.25, 0.25, 0.5), mat_fur, (20, 0, -20))
+    arm_r = add_part("Bear_Arm_R", (-0.85, 0.2, 1.1), (0.25, 0.25, 0.5), mat_fur, (20, 0, 20))
+
+    # Chân
+    leg_l = add_part("Bear_Leg_L", (0.4, 0.1, 0.15), (0.3, 0.3, 0.35), mat_fur)
+    leg_r = add_part("Bear_Leg_R", (-0.4, 0.1, 0.15), (0.3, 0.3, 0.35), mat_fur)
+
+    # Cúc áo (Trắng)
+    button_l = add_part("Button_L", (0.3, 0.6, 1.3), (0.05, 0.03, 0.05), mat_white)
+    button_r = add_part("Button_R", (-0.3, 0.6, 1.3), (0.05, 0.03, 0.05), mat_white)
+
+    print(f"Chú gấu Stylized đã xuất hiện tại {bear_root.location}!")
+    return bear_root
+
+def create_custom_mesh(name, vertices, faces, edges=[]):
+    """
+    Tạo một Mesh Object từ danh sách tọa độ các điểm và các mặt.
+    - vertices: List of (x, y, z)
+    - faces: List of vertex indices (e.g. [(0, 1, 2), (0, 2, 3)])
+    - edges: (Tùy chọn) List of vertex index pairs
+    """
+    # 1. Tạo dữ liệu Mesh
+    mesh = bpy.data.meshes.new(name)
+    
+    # 2. Nạp tọa độ vào Mesh
+    # from_pydata(vertices, edges, faces)
+    mesh.from_pydata(vertices, edges, faces)
+    
+    # Cập nhật mesh để tính toán các thông số hình học
+    mesh.update()
+    
+    # 3. Tạo Object chứa Mesh đó
+    obj = bpy.data.objects.new(name, mesh)
+    
+    # 4. Liên kết Object vào Scene hiện tại (Active Collection)
+    bpy.context.collection.objects.link(obj)
+    
+    return obj
+
+def create_sample_pyramid(context):
+    """Ví dụ tạo một hình Kim Tự Tháp từ danh sách tọa độ"""
+    # Tọa độ 5 đỉnh
+    verts = [
+        (1.0, 1.0, 0.0),   # 0: Góc đáy 1
+        (-1.0, 1.0, 0.0),  # 1: Góc đáy 2
+        (-1.0, -1.0, 0.0), # 2: Góc đáy 3
+        (1.0, -1.0, 0.0),  # 3: Góc đáy 4
+        (0.0, 0.0, 1.5)    # 4: Đỉnh chóp
+    ]
+    
+    # Danh sách các mặt (mỗi bộ là index của đỉnh trong list verts)
+    faces = [
+        (0, 1, 2, 3), # Mặt đáy (Square)
+        (0, 4, 1),    # Mặt bên 1 (Triangle)
+        (1, 4, 2),    # Mặt bên 2
+        (2, 4, 3),    # Mặt bên 3
+        (3, 4, 0)     # Mặt bên 4
+    ]
+    
+    obj = create_custom_mesh("Stylized_Pyramid", verts, faces)
+    
+    # Đặt vị trí tại 3D Cursor cho tiện quan sát
+    obj.location = context.scene.cursor.location
+    print(f"Đã tạo {obj.name} từ danh sách tọa độ.")

@@ -1,6 +1,7 @@
 import bpy
 from . import hud
 from . import logic
+from . import logic_upgrade
 from .functions import transform_tools
 from .functions import mesh_tools
 from .functions import object_tools
