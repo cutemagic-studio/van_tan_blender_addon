@@ -525,6 +525,140 @@ def generate_stylized_roof(self, context, roof_obj, tiles):
     context.view_layer.update()
     self.report({'INFO'}, f"Đã lợp mái: {len(new_tiles)} viên ngói.")
 
+def fill_rounded_square_pavement(self, context, floor_obj, bricks, inner_size=2.0, outer_size=8.0, corner_radius=1.5, gap=0.02):
+    """
+    Tạo khuôn viên lát đá hình vuông bo góc theo mẫu ảnh.
+    - inner_size: Kích thước cạnh lỗ trống ở giữa.
+    - outer_size: Kích thước cạnh tổng thể của sân.
+    - corner_radius: Bán kính bo góc của hình vuông.
+    """
+    if not floor_obj or not bricks:
+        return
+
+    # 1. THÔNG SỐ CƠ BẢN
+    avg_stone_w = sum(b.dimensions.x for b in bricks) / len(bricks)
+    avg_stone_l = sum(b.dimensions.y for b in bricks) / len(bricks)
+    
+    # Số lượng vòng gạch (Rings)
+    total_width = (outer_size - inner_size) / 2
+    num_rings = int(total_width / (avg_stone_l + gap))
+    
+    new_stones = []
+    
+    # 2. VÒNG LẶP QUA TỪNG LỚP (TỪ TRONG RA NGOÀI)
+    for r_idx in range(num_rings):
+        # Kích thước của "đường dẫn" ở giữa hàng gạch hiện tại
+        current_ring_offset = (r_idx * (avg_stone_l + gap)) + (avg_stone_l / 2)
+        side_half = (inner_size / 2) + current_ring_offset
+        
+        # Bán kính bo góc cho lớp này (tăng dần ra ngoài để giữ độ dày đều)
+        r_radius = corner_radius + (r_idx * (avg_stone_l + gap))
+        
+        # Chiều dài đoạn thẳng của hình vuông bo góc
+        straight_len = (side_half * 2) - (r_radius * 2)
+        if straight_len < 0: straight_len = 0
+        
+        # Chu vi của hình vuông bo góc: 4 cạnh thẳng + 1 hình tròn (4 góc cung)
+        arc_len = (2 * math.pi * r_radius) / 4 # Chiều dài 1 góc cung
+        total_perimeter = (straight_len * 4) + (arc_len * 4)
+        
+        # 3. TÍNH TOÁN SỐ VIÊN GẠCH CHO LỚP NÀY
+        # N * (avg_w + gap) = total_perimeter
+        num_stones = round(total_perimeter / (avg_stone_w + gap))
+        if num_stones < 4: num_stones = 4
+        
+        # Khoảng cách bước nhảy thực tế trên chu vi (tính theo đơn vị 0.0 -> 1.0)
+        step_t = 1.0 / num_stones
+        
+        # So le: Xoay điểm bắt đầu của mỗi hàng
+        start_t = (r_idx * 0.13) % 1.0
+        
+        for s_idx in range(num_stones):
+            t = (start_t + s_idx * step_t) % 1.0
+            
+            # --- HÀM LẤY VỊ TRÍ & HƯỚNG TRÊN HÌNH VUÔNG BO GÓC ---
+            pos, tangent = get_point_on_rounded_square(t, side_half, r_radius)
+            
+            source = random.choice(bricks)
+            new_s = source.copy()
+            new_s.data = source.data.copy()
+            context.collection.objects.link(new_s)
+            new_stones.append(new_s)
+            
+            # VỊ TRÍ
+            new_s.location = floor_obj.location + pos
+            new_s.location.z += 0.01 # Nổi nhẹ lên mặt sàn
+            
+            # XOAY: Theo hướng tiếp tuyến của đường dẫn
+            align_quat = tangent.to_track_quat('X', 'Z') # X là chiều dài viên gạch
+            new_s.rotation_euler = align_quat.to_euler()
+            
+            # RANDOM NHẸ: Thêm jitter Stylized
+            new_s.rotation_euler.z += math.radians(random.uniform(-1.5, 1.5))
+            new_s.scale *= random.uniform(0.95, 1.05)
+            
+            # ĐIỀU CHỈNH SCALE X: Để các viên gạch khép kín mạch (Optional)
+            # current_w = new_s.dimensions.x
+            # target_w = (total_perimeter / num_stones) - gap
+            # new_s.scale.x *= (target_w / current_w)
+
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã tạo sân gạch Stylized: {len(new_stones)} viên.")
+
+def get_point_on_rounded_square(t, side_half, radius):
+    """
+    Trả về (Vị trí, Tiếp tuyến) tại tham số t (0.0 -> 1.0) trên hình vuông bo góc.
+    """
+    # Chiều dài cạnh thẳng
+    s_len = (side_half * 2) - (radius * 2)
+    # Chiều dài 1 cung (1/4 hình tròn)
+    a_len = (math.pi * radius) / 2
+    
+    one_side_total = s_len + a_len
+    total_len = one_side_total * 4
+    
+    curr_dist = t * total_len
+    
+    # Xác định chúng ta đang ở cạnh nào (0, 1, 2, 3)
+    side_idx = int(curr_dist / one_side_total)
+    dist_in_side = curr_dist % one_side_total
+    
+    # Tọa độ các góc (trước khi bo) để tính toán hướng
+    # 0: Top-Right, 1: Bottom-Right, 2: Bottom-Left, 3: Top-Left
+    
+    # Logic: Đi từ cạnh thẳng phía trên, sau đó đến cung góc...
+    # Để đơn giản, ta chia mỗi "Side" thành 2 phần: Đoạn thẳng và Cung tròn
+    
+    # Hướng xoay của 4 cạnh
+    rotations = [0, -math.pi/2, -math.pi, -3*math.pi/2]
+    base_rot = rotations[side_idx]
+    
+    if dist_in_side <= s_len:
+        # ĐANG Ở ĐOẠN THẲNG
+        # Giả sử bắt đầu từ cạnh trên (Y dương), chạy từ trái sang phải (X tăng)
+        local_x = dist_in_side - (s_len / 2)
+        local_y = side_half
+        pos = Vector((local_x, local_y, 0))
+        tangent = Vector((1, 0, 0))
+    else:
+        # ĐANG Ở ĐOẠN CUNG
+        arc_t = (dist_in_side - s_len) / a_len # 0.0 -> 1.0 trong cung
+        angle = (math.pi / 2) * (1.0 - arc_t)
+        
+        # Tâm của cung tròn góc đó
+        center_x = (side_half - radius)
+        center_y = (side_half - radius)
+        
+        pos = Vector((center_x + radius * math.cos(angle), 
+                      center_y + radius * math.sin(angle), 0))
+        
+        # Tiếp tuyến của đường tròn: (-sin(a), cos(a))
+        tangent = Vector((-math.sin(angle), math.cos(angle), 0))
+
+    # XOAY VECTOR THEO CẠNH TƯƠNG ỨNG
+    rot_mat = Matrix.Rotation(base_rot, 4, 'Z')
+    return rot_mat @ pos, rot_mat @ tangent
+
 def generate_stone_house_v2(self, context, house_obj, bricks):
     """Xây dựng nhà tháp đá V2 nâng cao (Tapered Tower)."""
     if not house_obj or not bricks:
@@ -716,117 +850,394 @@ def generate_wall_accents_v2(self, context, house_obj, bricks):
     context.view_layer.update()
     self.report({'INFO'}, f"Đã trang trí tháp nghiêng: {len(new_stones)} viên gạch.")
 
+def generate_wooden_plank_walls(self, context, house_obj, planks, gap=0.015):
+    """
+    Tạo các bức tường gỗ bao quanh khối Cube (Sửa lỗi Scale nhầm trục dày).
+    """
+    if not house_obj or not planks:
+        return
+
+    # 1. THÔNG SỐ KHỐI NHÀ
+    bounds = get_world_bounds(house_obj)
+    min_x, max_x = bounds['x']
+    min_y, max_y = bounds['y']
+    min_z, max_z = bounds['z']
+    
+    house_w = max_x - min_x
+    house_d = max_y - min_y
+    house_h = max_z - min_z
+    
+    # 2. PHÂN TÍCH THANH GỖ MẪU (Để biết trục nào là chiều dài, trục nào là độ dày)
+    ref_plank = planks[0]
+    # Giả định Z là chiều cao. Ta so sánh X và Y để tìm trục dài nhất.
+    is_x_long = ref_plank.dimensions.x >= ref_plank.dimensions.y
+    length_axis = 'X' if is_x_long else 'Y'
+    thickness_axis = 'Y' if is_x_long else 'X'
+    
+    avg_plank_h = sum(p.dimensions.z for p in planks) / len(planks)
+    
+    # 3. TÍNH TOÁN FIT CHIỀU CAO
+    num_rows = math.ceil(house_h / (avg_plank_h + gap))
+    if num_rows < 1: num_rows = 1
+    
+    actual_plank_h = (house_h / num_rows) - gap
+    scale_z_multiplier = actual_plank_h / avg_plank_h
+    
+    # 4. CẤU HÌNH 4 MẶT TƯỜNG
+    wall_configs = [
+        (Vector((0, -1, 0)), min_y, 'X', house_w), # Trước
+        (Vector((1, 0, 0)), max_x, 'Y', house_d),  # Phải
+        (Vector((0, 1, 0)), max_y, 'X', house_w),  # Sau
+        (Vector((-1, 0, 0)), min_x, 'Y', house_d)  # Trái
+    ]
+
+    new_planks = []
+    
+    # Tạm ẩn mẫu
+    original_hides = {obj: obj.hide_get() for obj in planks}
+    for obj in planks: obj.hide_set(True)
+
+    for normal, face_coord, axis_name, face_width in wall_configs:
+        for r in range(num_rows):
+            source = random.choice(planks)
+            new_p = source.copy()
+            new_p.data = source.data.copy()
+            context.collection.objects.link(new_p)
+            new_planks.append(new_p)
+
+            # --- SỬA LỖI VỊ TRÍ: ĐƯA ORIGIN VỀ TÂM HÌNH HỌC ---
+            # Điều này đảm bảo khi đặt vào tâm mặt Cube, thanh gỗ không bị lệch sang một bên
+            context.view_layer.objects.active = new_p
+            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+            
+            # --- SCALE CHIỀU CAO (Z) ---
+            new_p.scale.z *= scale_z_multiplier
+            
+            # --- SCALE CHIỀU DÀI (Fit ngang mặt Cube) ---
+            curr_len = new_p.dimensions.x if is_x_long else new_p.dimensions.y
+            if is_x_long:
+                new_p.scale.x *= (face_width / curr_len)
+            else:
+                new_p.scale.y *= (face_width / curr_len)
+            
+            # --- TÍNH TOÁN VỊ TRÍ & OFFSET ĐỘ DÀY ---
+            thickness = new_p.dimensions.y if is_x_long else new_p.dimensions.x
+            offset_dist = thickness / 2
+            
+            z_pos = min_z + (r * (actual_plank_h + gap)) + (actual_plank_h / 2)
+            
+            if axis_name == 'X':
+                base_loc = Vector(((min_x + max_x)/2, face_coord, z_pos))
+            else:
+                base_loc = Vector((face_coord, (min_y + max_y)/2, z_pos))
+            
+            # Gán vị trí chuẩn (Tâm mặt + đẩy ra ngoài theo độ dày)
+            new_p.location = base_loc + (normal * offset_dist)
+            
+            # --- XOAY ---
+            track_axis = 'Y' if is_x_long else 'X'
+            new_p.rotation_mode = 'QUATERNION'
+            new_p.rotation_quaternion = normal.to_track_quat(track_axis, 'Z')
+
+    # Dọn dẹp
+    for obj, hidden in original_hides.items():
+        obj.hide_set(hidden)
+        
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã tạo tường gỗ Fit Height: {len(new_planks)} thanh.")
+
+def generate_vertical_plank_walls(self, context, house_obj, planks, gap=0.01):
+    """
+    Tạo các bức tường gỗ đứng bao quanh khối Cube.
+    """
+    if not house_obj or not planks:
+        return
+
+    # 1. THÔNG SỐ KHỐI NHÀ
+    bounds = get_world_bounds(house_obj)
+    min_x, max_x = bounds['x']
+    min_y, max_y = bounds['y']
+    min_z, max_z = bounds['z']
+    
+    house_w = max_x - min_x
+    house_d = max_y - min_y
+    house_h = max_z - min_z
+    
+    # 2. PHÂN TÍCH MẪU
+    ref_plank = planks[0]
+    # Trục Z là chiều cao. Tìm trục rộng (width) và dày (thickness)
+    is_x_wide = ref_plank.dimensions.x >= ref_plank.dimensions.y
+    width_axis = 'X' if is_x_wide else 'Y'
+    thickness_axis = 'Y' if is_x_wide else 'X'
+    
+    avg_plank_w = sum(p.dimensions.x if is_x_wide else p.dimensions.y for p in planks) / len(planks)
+    
+    # 3. CẤU HÌNH 4 MẶT TƯỜNG
+    wall_configs = [
+        (Vector((0, -1, 0)), min_y, 'X', house_w), # Trước
+        (Vector((1, 0, 0)), max_x, 'Y', house_d),  # Phải
+        (Vector((0, 1, 0)), max_y, 'X', house_w),  # Sau
+        (Vector((-1, 0, 0)), min_x, 'Y', house_d)  # Trái
+    ]
+
+    new_planks = []
+    original_hides = {obj: obj.hide_get() for obj in planks}
+    for obj in planks: obj.hide_set(True)
+
+    for normal, face_coord, axis_name, face_width in wall_configs:
+        # TÍNH TOÁN FIT CHIỀU NGANG MẶT TƯỜNG
+        num_cols = math.ceil(face_width / (avg_plank_w + gap))
+        if num_cols < 1: num_cols = 1
+        
+        # Độ rộng thực tế để khít mặt
+        actual_plank_w = (face_width / num_cols) - gap
+        
+        for c in range(num_cols):
+            source = random.choice(planks)
+            new_p = source.copy()
+            new_p.data = source.data.copy()
+            context.collection.objects.link(new_p)
+            new_planks.append(new_p)
+
+            # Đưa Origin về tâm
+            context.view_layer.objects.active = new_p
+            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+            
+            # --- SCALE CHIỀU CAO (FIT CUBE HEIGHT) ---
+            new_p.scale.z *= (house_h / source.dimensions.z)
+            
+            # --- SCALE ĐỘ RỘNG (FIT FACE WIDTH) ---
+            orig_w = source.dimensions.x if is_x_wide else source.dimensions.y
+            if is_x_wide:
+                new_p.scale.x *= (actual_plank_w / orig_w)
+            else:
+                new_p.scale.y *= (actual_plank_w / orig_w)
+            
+            # --- VỊ TRÍ ---
+            thickness = new_p.dimensions.y if is_x_wide else new_p.dimensions.x
+            offset_dist = thickness / 2
+            
+            # Tọa độ ngang trên mặt tường
+            start_coord = (min_x if axis_name == 'X' else min_y)
+            pos_main = start_coord + (c * (actual_plank_w + gap)) + (actual_plank_w / 2)
+            
+            z_pos = (min_z + max_z) / 2
+            
+            if axis_name == 'X':
+                base_loc = Vector((pos_main, face_coord, z_pos))
+            else:
+                base_loc = Vector((face_coord, pos_main, z_pos))
+            
+            new_p.location = base_loc + (normal * offset_dist)
+            
+            # --- XOAY ---
+            track_axis = 'Y' if is_x_wide else 'X'
+            new_p.rotation_mode = 'QUATERNION'
+            new_p.rotation_quaternion = normal.to_track_quat(track_axis, 'Z')
+
+    for obj, hidden in original_hides.items():
+        obj.hide_set(hidden)
+        
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã tạo tường gỗ đứng: {len(new_planks)} thanh.")
+
+def snap_planks_to_segments(self, context, segments, material_bar):
+    """
+    Snap và Scale thanh vật liệu khớp vào các đoạn thẳng được chọn.
+    """
+    if not material_bar or not segments:
+        return
+
+    # 1. PHÂN TÍCH THANH VẬT LIỆU MẪU
+    # Tìm trục dài nhất của thanh vật liệu
+    dims = material_bar.dimensions
+    max_dim = max(dims)
+    if max_dim < 0.001: return
+    
+    if dims.x == max_dim:
+        length_axis = 'X'
+        track_axis = 'X'
+    elif dims.y == max_dim:
+        length_axis = 'Y'
+        track_axis = 'Y'
+    else:
+        length_axis = 'Z'
+        track_axis = 'Z'
+        
+    new_objs = []
+    
+    # 2. DUYỆT QUA CÁC ĐOẠN THẲNG
+    for seg_obj in segments:
+        # Lấy tọa độ 2 điểm đầu mút
+        # Hỗ trợ Mesh (lấy 2 đỉnh đầu tiên) hoặc Curve (lấy 2 điểm đầu tiên)
+        p1, p2 = None, None
+        
+        mw = seg_obj.matrix_world
+        
+        if seg_obj.type == 'MESH':
+            if len(seg_obj.data.vertices) < 2: continue
+            p1 = mw @ seg_obj.data.vertices[0].co
+            p2 = mw @ seg_obj.data.vertices[1].co
+        elif seg_obj.type == 'CURVE':
+            if not seg_obj.data.splines: continue
+            points = seg_obj.data.splines[0].bezier_points if seg_obj.data.splines[0].type == 'BEZIER' else seg_obj.data.splines[0].points
+            if len(points) < 2: continue
+            p1 = mw @ points[0].co.xyz
+            p2 = mw @ points[1].co.xyz
+            
+        if p1 is None or p2 is None: continue
+        
+        # 3. TÍNH TOÁN VÉC-TƠ VÀ CHIỀU DÀI
+        vec = p2 - p1
+        length = vec.length
+        center = (p1 + p2) / 2
+        
+        if length < 0.0001: continue
+        
+        # 4. TẠO VÀ CĂN CHỈNH THANH VẬT LIỆU
+        new_obj = material_bar.copy()
+        new_obj.data = material_bar.data.copy()
+        context.collection.objects.link(new_obj)
+        new_objs.append(new_obj)
+        
+        # Đưa Origin về tâm để quay cho chuẩn
+        context.view_layer.objects.active = new_obj
+        bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+        
+        # Vị trí
+        new_obj.location = center
+        
+        # Xoay theo hướng đoạn thẳng
+        new_obj.rotation_mode = 'QUATERNION'
+        new_obj.rotation_quaternion = vec.to_track_quat(track_axis, 'Z' if track_axis != 'Z' else 'Y')
+        
+        # Scale chiều dài khớp đoạn thẳng
+        # Tính tỉ lệ scale: Chiều dài đích / Chiều dài hiện tại
+        if length_axis == 'X':
+            current_len = new_obj.dimensions.x
+            if current_len > 0: new_obj.scale.x *= (length / current_len)
+        elif length_axis == 'Y':
+            current_len = new_obj.dimensions.y
+            if current_len > 0: new_obj.scale.y *= (length / current_len)
+        else:
+            current_len = new_obj.dimensions.z
+            if current_len > 0: new_obj.scale.z *= (length / current_len)
+
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã Snap & Fit {len(new_objs)} thanh vật liệu.")
+
 def create_stylized_tree(self, context):
     """
-    Tạo thân cây Stylized dùng kỹ thuật Skin Modifier để có hệ lưới tối ưu.
-    - Sửa lỗi: Đảm bảo có Root Vertex và tính toán lại Skin.
+    Tạo cây Stylized với logic Phân nhánh đa điểm và Cành dẫn đầu vươn cao.
     """
-    # 1. TẠO MESH VÀ OBJECT MỚI
+    
+    # --- BẢNG ĐIỀU KHIỂN NÂNG CAO (DNA CỦA CÂY) ---
+    cfg = {
+        'depth': 4,                  # Cấp độ đệ quy của tán lá.
+        'trunk_h': 4.0,              # Chiều cao tổng của thân chính.
+        'trunk_segs': 6,             # Số đốt xương trên thân.
+        'branch_forks': 2,           # Số nhánh con ở các cấp phía trên.
+        'first_split_forks': 3,      # [MỚI] Ép lần rẽ đầu tiên từ thân phải có 3 nhánh chính.
+        'trunk_side_branches': False, # [MỚI] Cho phép mọc nhánh chính dọc thân khi đang vươn cao.
+        'spread_base': 0.85,          # Độ xòe của tán phía dưới.
+        'spread_top': 0.35,          # Độ xòe phía ngọn (càng nhỏ càng chụm vươn cao).
+        'length_mult': 0.8,         # Tỉ lệ giảm chiều dài cành con.
+        'radius_mult': 0.7,          # Tỉ lệ thu nhỏ bán kính cành con.
+        'leader_bias': 0.2,          # Độ thẳng của trục dẫn đầu (càng nhỏ càng thẳng).
+        'noise_strength': 0.1        # Độ cong vẹo tự nhiên.
+    }
+
     mesh_data = bpy.data.meshes.new("StylizedTreeMesh")
     tree_obj = bpy.data.objects.new("Stylized_Tree", mesh_data)
     context.collection.objects.link(tree_obj)
     
     bm = bmesh.new()
-    # Skin layer chứa thông số Radius (Bán kính) cho Skin Modifier
     skin_layer = bm.verts.layers.skin.verify()
-    
-    # 2. THÂN CHÍNH (Trunk)
-    # Gốc cây
-    v_base = bm.verts.new((0, 0, 0))
-    v_base[skin_layer].radius = (1.2, 1.2) # Gốc cây rất to theo ảnh mẫu
-    
-    curr_v = v_base
-    trunk_h = 4.5
-    trunk_segs = 6
-    for i in range(1, trunk_segs + 1):
-        t = i / trunk_segs
-        vx = random.uniform(-0.4, 0.4) * (t**2) # Cong dần về phía trên
-        vy = random.uniform(-0.4, 0.4) * (t**2)
-        vz = trunk_h * t
-        
-        next_v = bm.verts.new((vx, vy, vz))
-        bm.edges.new((curr_v, next_v))
-        
-        # Bán kính thuôn nhỏ dần lên đỉnh thân
-        rad = 1.2 * (1.0 - t * 0.5)
-        next_v[skin_layer].radius = (rad, rad)
-        curr_v = next_v
-        
-    v_trunk_top = curr_v
 
-    # 3. BỘ RỄ (Roots) - Uốn lượn và lan rộng
-    num_roots = random.randint(6, 10)
-    for _ in range(num_roots):
-        angle = random.uniform(0, math.pi * 2)
-        root_dist = random.uniform(3.0, 5.0)
-        
-        r_curr = v_base
-        root_segs = 4
-        for i in range(1, root_segs + 1):
-            t = i / root_segs
-            # Rễ bò lan trên mặt đất, uốn khúc XY
-            rx = math.cos(angle) * root_dist * t + random.uniform(-0.5, 0.5)
-            ry = math.sin(angle) * root_dist * t + random.uniform(-0.5, 0.5)
-            rz = random.uniform(-0.1, 0.1) # Hơi nhấp nhô mặt đất
-            
-            rv = bm.verts.new((rx, ry, rz))
-            bm.edges.new((r_curr, rv))
-            
-            # Rễ mỏng dần ra xa nhưng vẫn đủ dày ở sát gốc
-            rad_r = 0.7 * (1.0 - t * 0.85)
-            rv[skin_layer].radius = (rad_r, rad_r)
-            r_curr = rv
+    # Hàm đệ quy mọc cành
+    def grow_branch(start_v, direction, length, radius, depth, is_leader=True):
+        if depth == 0 or radius < 0.01:
+            return
 
-    # 4. CÀNH CÂY (Branches) - Tỏa tròn từ đỉnh
-    num_branches = random.randint(4, 6)
-    for _ in range(num_branches):
-        angle = random.uniform(0, math.pi * 2)
-        b_curr = v_trunk_top
-        branch_segs = 3
-        for i in range(1, branch_segs + 1):
-            t = i / branch_segs
-            # Cành vươn ra ngoài và lên cao
-            bx = b_curr.co.x + math.cos(angle) * 2.5 * t + random.uniform(-0.5, 0.5)
-            by = b_curr.co.y + math.sin(angle) * 2.5 * t + random.uniform(-0.5, 0.5)
-            bz = b_curr.co.z + random.uniform(1.2, 2.5) * t
+        noise = Vector((random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1), random.uniform(0.02, 0.08)))
+        new_pos_dir = (direction + noise).normalized()
+        end_v = bm.verts.new(start_v.co + new_pos_dir * length)
+        end_v[skin_layer].radius = (radius, radius)
+        bm.edges.new((start_v, end_v))
+
+        # LUẬT RẼ NHÁNH: Cấp đầu tiên ép 3 nhánh, các cấp sau dùng cfg['branch_forks']
+        num_forks = cfg['first_split_forks'] if depth == cfg['depth'] else cfg['branch_forks']
+        
+        new_length = length * cfg['length_mult']
+        new_radius = radius * cfg['radius_mult']
+        base_angle = random.uniform(0, math.pi * 2) 
+
+        for i in range(num_forks):
+            t_progress = (cfg['depth'] - depth) / cfg['depth']
+            current_spread = cfg['spread_base'] * (1 - t_progress) + cfg['spread_top'] * t_progress
             
-            bv = bm.verts.new((bx, by, bz))
-            bm.edges.new((b_curr, bv))
+            # Nhánh Leader (thân vươn)
+            if i == 0:
+                spread_factor = cfg['leader_bias']
+                child_is_leader = True
+            else:
+                spread_factor = current_spread
+                child_is_leader = False
             
-            # Cành nhỏ dần về phía ngọn để gắn tán lá
-            rad_b = 0.5 * (1.0 - t * 0.75)
-            bv[skin_layer].radius = (rad_b, rad_b)
-            b_curr = bv
+            angle = base_angle + (i * (math.pi * 2 / num_forks))
+            radial_dir = Vector((math.cos(angle), math.sin(angle), 0))
+            out_dir = (Vector((0, 0, 1)) * (1 - spread_factor) + radial_dir * spread_factor).normalized()
+            
+            grow_branch(end_v, out_dir, new_length, new_radius, depth - 1, child_is_leader)
+
+    # --- THỰC THI DỰNG THÂN CHÍNH (Vươn cao và sinh nhánh dọc thân) ---
+    root_v = bm.verts.new((0, 0, 0))
+    root_v[skin_layer].radius = (0.6, 0.6)
+    
+    curr_trunk_v = root_v
+    side_branch_count = 0
+    
+    for i in range(1, cfg['trunk_segs'] + 1):
+        t = i / cfg['trunk_segs']
+        # Thân chính vươn lên
+        pos = Vector((math.sin(t*1.5)*0.1, math.cos(t*1.5)*0.05, cfg['trunk_h'] * t))
+        v = bm.verts.new(pos)
+        rad = 0.6 * (1.0 - t * 0.3)
+        v[skin_layer].radius = (rad, rad)
+        bm.edges.new((curr_trunk_v, v))
+        curr_trunk_v = v
+        
+        # LOGIC NHÁNH DỌC THÂN: Mọc nhánh tại 40% và 70% chiều cao thân
+        if cfg['trunk_side_branches'] and i in [int(cfg['trunk_segs']*0.4), int(cfg['trunk_segs']*0.7)]:
+            side_branch_count += 1
+            # Nhánh mọc xiên ra ngoài
+            side_angle = random.uniform(0, math.pi * 2)
+            side_dir = Vector((math.cos(side_angle), math.sin(side_angle), 0.5)).normalized()
+            # Mọc một nhánh đơn lẻ từ vị trí này, depth thấp hơn tán chính một chút
+            grow_branch(v, side_dir, 1.8, rad * 0.7, cfg['depth'] - 1, False)
+
+    # --- TẠO TÁN CHÍNH TẠI ĐỈNH ---
+    grow_branch(curr_trunk_v, Vector((0, 0, 1)), 2.0, 0.3, cfg['depth'], True)
 
     bm.to_mesh(mesh_data)
     bm.free()
 
-    # 5. ÁP DỤNG MODIFIERS VÀ ĐẶT ROOT
+    # MODIFIERS
     context.view_layer.objects.active = tree_obj
-    
-    # Skin Modifier: Chuyển khung dây thành khối
     skin_mod = tree_obj.modifiers.new(name="Skin", type='SKIN')
+    skin_mod.branch_smoothing = 0.8
     
-    # QUAN TRỌNG: Phải vào Edit Mode để Mark Root, nếu không Skin Modifier sẽ bị lỗi
     bpy.ops.object.mode_set(mode='EDIT')
-    # Chọn đỉnh gốc (thường là đỉnh 0)
     bpy.ops.mesh.select_all(action='DESELECT')
-    # Chuyển về Object mode để truy cập mesh data qua bpy
     bpy.ops.object.mode_set(mode='OBJECT')
     tree_obj.data.vertices[0].select = True
     bpy.ops.object.mode_set(mode='EDIT')
-    # Đánh dấu đỉnh được chọn làm Root cho Skin
     bpy.ops.object.skin_root_mark()
     bpy.ops.object.mode_set(mode='OBJECT')
 
-    # Subdiv Modifier: Làm mịn
     sub_mod = tree_obj.modifiers.new(name="Subdiv", type='SUBSURF')
     sub_mod.levels = 2
-    
-    # Shade Smooth
     bpy.ops.object.shade_smooth()
     
-    # Di chuyển về 3D Cursor
     tree_obj.location = context.scene.cursor.location
-    
-    self.report({'INFO'}, "Đã tạo thân cây Stylized với hệ lưới tối ưu (Skin + Subdiv).")
+    self.report({'INFO'}, f"Đã tạo cây đa điểm phân nhánh ({side_branch_count} nhánh phụ dọc thân).")

@@ -1413,6 +1413,38 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
             logic_upgrade.fill_circular_pavement(self, context, active_obj, inner_r=12, outer_r=40)
         return
 
+    elif alignMethod == 'FILL_ROUNDED_SQUARE_PAVEMENT':
+        active_obj = context.active_object
+        bricks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and bricks:
+            logic_upgrade.fill_rounded_square_pavement(self, context, active_obj, bricks, inner_size=40.0, outer_size=120.0, corner_radius=3.0)
+        return
+
+    elif alignMethod == 'FILL_WOODEN_WALLS':
+        active_obj = context.active_object
+        planks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and planks:
+            logic_upgrade.generate_wooden_plank_walls(self, context, active_obj, planks, gap=0.015)
+        return
+
+    elif alignMethod == 'FILL_WOODEN_WALLS_VERTICAL':
+        active_obj = context.active_object
+        planks = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and planks:
+            logic_upgrade.generate_vertical_plank_walls(self, context, active_obj, planks, gap=0.01)
+        return
+
+    elif alignMethod == 'SNAP_PLANKS_TO_SEGMENTS':
+        active_obj = context.active_object
+        segments = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and segments:
+            logic_upgrade.snap_planks_to_segments(self, context, segments, active_obj)
+        return
+
+    elif alignMethod == 'CREATE_STYLIZED_TREE':
+        logic_upgrade.create_stylized_tree(self, context)
+        return
+
     elif alignMethod == 'FILL_STONE_HOUSE':
         active_obj = context.active_object
         bricks = [obj for obj in context.selected_objects if obj != active_obj]
@@ -1453,10 +1485,6 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         bricks = [obj for obj in context.selected_objects if obj != active_obj]
         if active_obj and bricks:
             logic_upgrade.generate_stone_house_v2(self, context, active_obj, bricks)
-        return
-
-    elif alignMethod == 'CREATE_STYLIZED_TREE':
-        logic_upgrade.create_stylized_tree(self, context)
         return
 
     elif alignMethod == 'FILL_STYLIZED_ROOF':

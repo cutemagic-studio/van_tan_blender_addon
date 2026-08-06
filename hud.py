@@ -563,6 +563,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong07d = col.operator("vt.object_action", text="ARRANGE_ON_CURVE (XYZ)", icon='BACK')
                 thaoTacQuanTrong08d = col.operator("vt.object_action", text="FILL_CANOPY (XYZ)", icon='BACK')
                 thaoTacQuanTrong09d = col.operator("vt.object_action", text="FILL_CIRCULAR_PAVEMENT (XYZ)", icon='BACK')
+                thaoTacQuanTrong09d1 = col.operator("vt.object_action", text="FILL_ROUNDED_SQUARE_PAVEMENT (XYZ)", icon='BACK')
                 thaoTacQuanTrong10d = col.operator("vt.object_action", text="FILL_STONE_HOUSE (XYZ)", icon='BACK')
                 thaoTacQuanTrong10d1 = col.operator("vt.object_action", text="FILL_CORNER_PILLARS (XYZ)", icon='BACK')
                 thaoTacQuanTrong10d2 = col.operator("vt.object_action", text="FILL_WALL_ACCENTS (XYZ)", icon='BACK')
@@ -572,6 +573,9 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong11d2 = col.operator("vt.object_action", text="FILL_WALL_ACCENTS_V2 (XYZ)", icon='BACK')
 
                 thaoTacQuanTrong12d = col.operator("vt.object_action", text="FILL_STYLIZED_ROOF (XYZ)", icon='BACK')
+                thaoTacQuanTrong13d = col.operator("vt.object_action", text="FILL_WOODEN_WALLS (XYZ)", icon='BACK')
+                thaoTacQuanTrong13d1 = col.operator("vt.object_action", text="FILL_WOODEN_WALLS_VERTICAL (XYZ)", icon='BACK')
+                thaoTacQuanTrong14d = col.operator("vt.object_action", text="SNAP_PLANKS_TO_SEGMENTS (XYZ)", icon='BACK')
 
                 thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
@@ -588,6 +592,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong07d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ARRANGE_ON_CURVE.Z'
                 thaoTacQuanTrong08d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CANOPY.Z'
                 thaoTacQuanTrong09d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CIRCULAR_PAVEMENT.Z'
+                thaoTacQuanTrong09d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_ROUNDED_SQUARE_PAVEMENT.Z'
 
                 thaoTacQuanTrong10d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_STONE_HOUSE.Z'
                 thaoTacQuanTrong10d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_CORNER_PILLARS.Z'
@@ -598,6 +603,9 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong11d2.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WALL_ACCENTS_V2.Z'
 
                 thaoTacQuanTrong12d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_STYLIZED_ROOF.Z'
+                thaoTacQuanTrong13d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WOODEN_WALLS.Z'
+                thaoTacQuanTrong13d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WOODEN_WALLS_VERTICAL.Z'
+                thaoTacQuanTrong14d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SNAP_PLANKS_TO_SEGMENTS.Z'
 
                 thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CREATE_STYLIZED_TREE.Z'
 
