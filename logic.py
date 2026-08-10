@@ -1445,6 +1445,34 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         logic_upgrade.create_stylized_tree(self, context)
         return
 
+    elif alignMethod == 'GENERATE_STYLIZED_STREAM':
+        # Lấy Active Object làm đường dẫn (Curve)
+        # Lấy Ground (thường là plane được chọn cùng)
+        # Các vật thể còn lại là đá
+        active_obj = context.active_object
+        selected = context.selected_objects
+        if active_obj and active_obj.type == 'CURVE':
+            stones = [obj for obj in selected if obj != active_obj and obj.type == 'MESH']
+            # Giả định vật thể to nhất trong đám chọn là Ground, nếu không mặc định dùng z=0
+            ground_obj = None # Có thể bổ sung logic tìm ground sau
+            logic_upgrade.generate_stylized_stream(self, context, active_obj, ground_obj, stones)
+        return
+
+    elif alignMethod == 'DEFORM_CANOPY':
+        selected = context.selected_objects
+        if selected:
+            logic_upgrade.deform_stylized_canopy(self, context, selected)
+        return
+
+    elif alignMethod == 'ATTACH_LEAVES':
+        active_obj = context.active_object
+        selected = context.selected_objects
+        if active_obj and active_obj.type == 'MESH':
+            leaf_samples = [obj for obj in selected if obj != active_obj and obj.type == 'MESH']
+            if leaf_samples:
+                logic_upgrade.attach_leaves_to_canopy(self, context, leaf_samples, active_obj)
+        return
+
     elif alignMethod == 'FILL_SHINGLED_CANOPY':
         active_obj = context.active_object
         leaves = [obj for obj in context.selected_objects if obj != active_obj]

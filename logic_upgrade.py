@@ -1242,6 +1242,292 @@ def create_stylized_tree(self, context):
     tree_obj.location = context.scene.cursor.location
     self.report({'INFO'}, f"Đã tạo cây đa điểm phân nhánh ({side_branch_count} nhánh phụ dọc thân).")
 
+def deform_stylized_canopy(self, context, canopy_objs):
+    """
+    Biến dạng các khối Sphere được chọn thành tán cây Stylized (Bumpy look).
+    Đảm bảo tính độc bản (Unique) cho mỗi tán cây bằng cách ngẫu nhiên hóa tọa độ Texture.
+    """
+    if not canopy_objs:
+        return
+
+    for obj in canopy_objs:
+        if obj.type != 'MESH': continue
+        
+        # 1. BIẾN DẠNG KHUNG (SQUASH & STRETCH)
+        # Bóp méo nhẹ hình dáng tổng thể của quả cầu
+        obj.scale.x *= random.uniform(0.9, 1.1)
+        obj.scale.y *= random.uniform(0.9, 1.1)
+        obj.scale.z *= random.uniform(0.85, 1.05)
+        
+        # 2. TẠO TEXTURE NHIỄU RIÊNG BIỆT (Để đảm bảo không trùng lặp)
+        tex_name = f"Tex_Canopy_{obj.name}_{random.randint(100, 999)}"
+        tex = bpy.data.textures.new(name=tex_name, type='CLOUDS')
+        tex.noise_scale = random.uniform(0.9, 1.4)
+        tex.noise_depth = 2
+            
+        # 3. ÁP DỤNG DISPLACE MODIFIER VỚI TỌA ĐỘ NGẪU NHIÊN
+        disp_mod = obj.modifiers.new(name="Canopy_Bumps", type='DISPLACE')
+        disp_mod.texture = tex
+        
+        # SỬ DỤNG MAPPING 'GLOBAL' HOẶC 'OBJECT' ĐỂ TẠO SỰ KHÁC BIỆT
+        # Chúng ta dùng 'LOCAL' nhưng sẽ xoay nhẹ dữ liệu mesh ngầm hoặc đổi Midlevel
+        disp_mod.texture_coords = 'LOCAL'
+        disp_mod.strength = random.uniform(0.4, 0.65)
+        disp_mod.mid_level = random.uniform(0.45, 0.55)
+        
+        # 4. LÀM MƯỢT (SMOOTH)
+        smooth_mod = obj.modifiers.new(name="Canopy_Smooth", type='SMOOTH')
+        smooth_mod.iterations = random.randint(20, 30) # Ngẫu nhiên độ mượt
+        
+        # 5. LÀM MƯỢT BỀ MẶT
+        context.view_layer.objects.active = obj
+        bpy.ops.object.shade_smooth()
+
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã tạo {len(canopy_objs)} tán cây độc bản.")
+
+def attach_leaves_to_canopy(self, context, leaf_samples, canopy_obj, leaf_density=1.0):
+    """
+    Đính lá lên tán cây với mật độ có thể điều chỉnh.
+    - leaf_density: Hệ số mật độ (0.1 -> 5.0). Mặc định 1.0.
+    """
+    if not canopy_obj or canopy_obj.type != 'MESH' or not leaf_samples:
+        return
+
+    # 1. KHỞI TẠO DỮ LIỆU BỀ MẶT
+    mw = canopy_obj.matrix_world
+    depsgraph = context.view_layer.depsgraph
+    eval_obj = canopy_obj.evaluated_get(depsgraph)
+    mesh_data = eval_obj.to_mesh()
+    
+    bm = bmesh.new()
+    bm.from_mesh(mesh_data)
+    bm.transform(mw)
+    
+    face_centers = [f.calc_center_median() for f in bm.faces]
+    face_normals = [f.normal.copy() for f in bm.faces]
+    
+    # 2. THÔNG SỐ KHỐI VÀ TÍNH TOÁN SỐ LƯỢNG LÁ
+    bounds = get_world_bounds(canopy_obj)
+    min_z, max_z = bounds['z']
+    vol_h = max_z - min_z
+    
+    # Ước lượng diện tích bề mặt (dựa trên BBox) để tính target_count
+    area_estimate = (bounds['x'][1]-bounds['x'][0]) * (bounds['y'][1]-bounds['y'][0])
+    target_leaf_count = int(area_estimate * 5 * leaf_density)
+    target_leaf_count = max(5, min(target_leaf_count, 300)) # Giới hạn an toàn
+
+    # Xáo trộn danh sách điểm
+    combined = []
+    for i in range(len(face_centers)):
+        combined.append((face_centers[i], face_normals[i]))
+    random.shuffle(combined)
+    
+    new_leaves = []
+    # Khoảng cách tối thiểu tỉ lệ nghịch với mật độ để lá chen nhau được khi cần dày
+    min_dist_base = sum(max(s.dimensions) for s in leaf_samples) / len(leaf_samples) * 0.75
+    min_dist = min_dist_base / math.sqrt(leaf_density) 
+    
+    placed_locations = []
+
+    # Tạm ẩn mẫu
+    original_hides = {obj: obj.hide_get() for obj in leaf_samples}
+    for obj in leaf_samples: obj.hide_set(True)
+
+    # 3. THỰC HIỆN ĐÍNH LÁ
+    for pos, normal in combined:
+        if len(new_leaves) >= target_leaf_count:
+            break
+            
+        z_factor = (pos.z - min_z) / vol_h if vol_h > 0 else 0.5
+        # Không mọc lá ở 25% phần dưới đáy
+        if z_factor < 0.25: continue
+            
+        # KIỂM TRA CHỒNG LẤP
+        is_too_close = False
+        for p in placed_locations:
+            if (pos - p).length < min_dist:
+                is_too_close = True
+                break
+        if is_too_close: continue
+            
+        # ĐẶT LÁ
+        source = random.choice(leaf_samples)
+        new_l = source.copy()
+        new_l.data = source.data.copy()
+        context.collection.objects.link(new_l)
+        new_leaves.append(new_l)
+        placed_locations.append(pos.copy())
+        
+        # --- LOGIC VỊ TRÍ: Đẩy nhẹ lá ra ngoài 1.5cm để chống lún tuyệt đối ---
+        new_l.location = pos + normal * 0.015
+        
+        # --- LOGIC XOAY: Ma trận hướng chuẩn (X-Y-Z Alignment) ---
+        leaf_up = normal.normalized()
+        canopy_center = canopy_obj.location
+        outward_vec = (pos - canopy_center).normalized()
+        world_down = Vector((0, 0, -1))
+        
+        # Hướng rủ: Ưu tiên chúi xuống và hơi đẩy ra ngoài
+        target_droop_dir = (world_down * 0.75 + outward_vec * 0.25).normalized()
+        leaf_forward = (target_droop_dir - target_droop_dir.dot(leaf_up) * leaf_up).normalized()
+        if leaf_forward.length < 0.1: leaf_forward = outward_vec
+        
+        z_axis = leaf_up
+        y_axis = leaf_forward
+        x_axis = y_axis.cross(z_axis).normalized()
+        y_axis = z_axis.cross(x_axis).normalized()
+        mat_base = Matrix((x_axis, y_axis, z_axis)).transposed().to_4x4()
+        
+        # --- ĐỘ VÊNH (LIFT): Luôn dương, giảm dần theo cao độ ---
+        lift_angle = math.radians(10 + (1.0 - z_factor) * 35)
+        lift_angle = max(math.radians(5.0), lift_angle) # TUYỆT ĐỐI KHÔNG ÂM
+        
+        m_lift = Matrix.Rotation(lift_angle, 4, 'X')
+        m_jitter = Matrix.Rotation(math.radians(random.uniform(-15, 15)), 4, 'Z')
+        
+        new_l.rotation_mode = 'QUATERNION'
+        new_l.rotation_quaternion = (mat_base @ m_jitter @ m_lift).to_quaternion()
+        new_l.scale *= random.uniform(0.85, 1.25)
+
+    for obj, hidden in original_hides.items():
+        obj.hide_set(hidden)
+    bm.free()
+    eval_obj.to_mesh_clear()
+    context.view_layer.update()
+    
+    self.report({'INFO'}, f"Đã đính {len(new_leaves)} lá (Density: {leaf_density}).")
+
+    # 4. DỌN DẸP
+    for obj, hidden in original_hides.items():
+        obj.hide_set(hidden)
+    bm.free()
+    eval_obj.to_mesh_clear()
+    context.view_layer.update()
+    
+    self.report({'INFO'}, f"Đã hoàn thành đính {len(new_leaves)} lá (Gradient Lift applied).")
+
+    # 4. DỌN DẸP
+    for obj, hidden in original_hides.items():
+        obj.hide_set(hidden)
+    
+    bm.free()
+    eval_obj.to_mesh_clear()
+    context.view_layer.update()
+    
+    self.report({'INFO'}, f"Đã đính {len(new_leaves)} lá rủ tự nhiên.")
+
+    # 4. DỌN DẸP
+    for obj, hidden in original_hides.items():
+        obj.hide_set(hidden)
+    
+    bm.free()
+    eval_obj.to_mesh_clear()
+    context.view_layer.update()
+    
+    self.report({'INFO'}, f"Đã đính {len(new_leaves)} lá lên tán cây.")
+
+def generate_stylized_stream(self, context, curve_obj, ground_obj, stones, width=1.5, stone_gap=-0.1):
+    """
+    Tạo dòng suối Stylized bằng cách đắp 2 bờ đá dọc theo đường Curve (Fix Error: Path Sampling).
+    """
+    if not curve_obj or curve_obj.type != 'CURVE' or not stones:
+        return
+
+    # 1. TẠO SAMPLER ĐỂ LẤY DỮ LIỆU ĐƯỜNG CONG CHÍNH XÁC
+    temp_empty = bpy.data.objects.new("Stream_Sampler", None)
+    context.collection.objects.link(temp_empty)
+    constraint = temp_empty.constraints.new('FOLLOW_PATH')
+    constraint.target = curve_obj
+    constraint.use_fixed_location = True
+
+    def get_curve_info(factor):
+        constraint.offset_factor = max(0.0, min(1.0, factor))
+        context.view_layer.update()
+        pos = temp_empty.matrix_world.to_translation()
+        
+        # Tính hướng Forward (Tangent)
+        delta = 0.005
+        constraint.offset_factor = max(0.0, factor - delta)
+        context.view_layer.update()
+        pos_prev = temp_empty.matrix_world.to_translation()
+        
+        forward = (pos - pos_prev).normalized()
+        if forward.length < 0.001: forward = Vector((0, 1, 0))
+        return pos, forward
+
+    # 2. TÍNH CHIỀU DÀI VÀ SỐ BƯỚC
+    curve_len = sum(s.calc_length() for s in curve_obj.data.splines)
+    avg_stone_w = sum(s.dimensions.x for s in stones) / len(stones)
+    num_steps = int(curve_len / (avg_stone_w + stone_gap))
+    num_steps = max(2, num_steps)
+
+    left_bank_pts = []
+    right_bank_pts = []
+    original_hides = {obj: obj.hide_get() for obj in stones}
+    for obj in stones: obj.hide_set(True)
+
+    # 3. ĐẮP BỜ ĐÁ
+    for i in range(num_steps + 1):
+        t = i / num_steps
+        pos_world, forward = get_curve_info(t)
+        
+        # Véc-tơ vuông góc (Right)
+        right = Vector((forward.y, -forward.x, 0)).normalized()
+        
+        # Biến thiên độ rộng lòng suối (Stylized jitter)
+        var_width = width * (1.0 + random.uniform(-0.15, 0.15))
+        
+        p_left = pos_world + right * (var_width / 2)
+        p_right = pos_world - right * (var_width / 2)
+        
+        left_bank_pts.append(p_left)
+        right_bank_pts.append(p_right)
+        
+        # Đặt đá 2 bên
+        for p, side_norm in [(p_left, right), (p_right, -right)]:
+            source = random.choice(stones)
+            new_s = source.copy()
+            new_s.data = source.data.copy()
+            context.collection.objects.link(new_s)
+            
+            context.view_layer.objects.active = new_s
+            bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
+            
+            new_s.location = p
+            new_s.location.z += source.dimensions.z / 5 # Nổi nhẹ
+            
+            new_s.rotation_mode = 'QUATERNION'
+            new_s.rotation_quaternion = side_norm.to_track_quat('Y', 'Z')
+            new_s.rotation_euler.z += math.radians(random.uniform(-15, 15))
+            new_s.scale *= random.uniform(0.85, 1.25)
+
+    # 4. TẠO MẶT NƯỚC
+    water_mesh = bpy.data.meshes.new("Stream_Water")
+    water_obj = bpy.data.objects.new("Stylized_Water", water_mesh)
+    context.collection.objects.link(water_obj)
+    
+    verts = []
+    faces = []
+    for i in range(len(left_bank_pts)):
+        z_water = (left_bank_pts[i].z + right_bank_pts[i].z) / 2 + 0.01 
+        verts.append((left_bank_pts[i].x, left_bank_pts[i].y, z_water))
+        verts.append((right_bank_pts[i].x, right_bank_pts[i].y, z_water))
+        if i > 0:
+            v = i * 2
+            faces.append((v-2, v-1, v+1, v))
+            
+    water_mesh.from_pydata(verts, [], faces)
+    water_mesh.update()
+
+    # DỌN DẸP
+    bpy.data.objects.remove(temp_empty, do_unlink=True)
+    for obj, hidden in original_hides.items():
+        obj.hide_set(hidden)
+        
+    context.view_layer.update()
+    self.report({'INFO'}, "Đã hoàn thành suối Stylized.")
+
 def generate_shingled_canopy(self, context, volume_obj, leaf_samples):
     """
     Tạo tán lá kiểu lợp ngói (Shingled/Layered) bám theo khối volume.
