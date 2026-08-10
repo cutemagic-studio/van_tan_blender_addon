@@ -576,6 +576,9 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong13d = col.operator("vt.object_action", text="FILL_WOODEN_WALLS (XYZ)", icon='BACK')
                 thaoTacQuanTrong13d1 = col.operator("vt.object_action", text="FILL_WOODEN_WALLS_VERTICAL (XYZ)", icon='BACK')
                 thaoTacQuanTrong14d = col.operator("vt.object_action", text="SNAP_PLANKS_TO_SEGMENTS (XYZ)", icon='BACK')
+                thaoTacQuanTrong15d = col.operator("vt.object_action", text="FILL_SHINGLED_CANOPY (XYZ)", icon='BACK')
+                thaoTacQuanTrong16d = col.operator("vt.object_action", text="CUT_BY_VOLUME (XYZ)", icon='BACK')
+                thaoTacQuanTrong17d = col.operator("vt.object_action", text="GENERATE_SMART_BRIDGE (XYZ)", icon='BACK')
 
                 thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
@@ -606,6 +609,9 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong13d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WOODEN_WALLS.Z'
                 thaoTacQuanTrong13d1.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_WOODEN_WALLS_VERTICAL.Z'
                 thaoTacQuanTrong14d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.SNAP_PLANKS_TO_SEGMENTS.Z'
+                thaoTacQuanTrong15d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_SHINGLED_CANOPY.Z'
+                thaoTacQuanTrong16d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CUT_BY_VOLUME.Z'
+                thaoTacQuanTrong17d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_SMART_BRIDGE.Z'
 
                 thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CREATE_STYLIZED_TREE.Z'
 

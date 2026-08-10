@@ -1241,3 +1241,255 @@ def create_stylized_tree(self, context):
     
     tree_obj.location = context.scene.cursor.location
     self.report({'INFO'}, f"Đã tạo cây đa điểm phân nhánh ({side_branch_count} nhánh phụ dọc thân).")
+
+def generate_shingled_canopy(self, context, volume_obj, leaf_samples):
+    """
+    Tạo tán lá kiểu lợp ngói (Shingled/Layered) bám theo khối volume.
+    Lá xếp tầng ngăn nắp, hàng trên gối hàng dưới.
+    """
+    if not volume_obj or not leaf_samples:
+        return
+
+    # 1. KHỞI TẠO BVH TREE TỪ VOLUME
+    mw = volume_obj.matrix_world
+    depsgraph = context.view_layer.depsgraph
+    eval_obj = volume_obj.evaluated_get(depsgraph)
+    mesh_data = eval_obj.to_mesh()
+    
+    bm = bmesh.new()
+    bm.from_mesh(mesh_data)
+    bm.transform(mw)
+    bvh = BVHTree.FromBMesh(bm)
+    
+    # 2. THÔNG SỐ KHỐI & LÁ
+    bounds = get_world_bounds(volume_obj)
+    min_z, max_z = bounds['z']
+    center_v = (Vector((bounds['x'][0], bounds['y'][0], 0)) + Vector((bounds['x'][1], bounds['y'][1], 0))) / 2
+    vol_h = max_z - min_z
+    
+    source_leaf = random.choice(leaf_samples)
+    leaf_w = source_leaf.dimensions.x
+    leaf_l = source_leaf.dimensions.y # Chiều dài lá (hướng ra ngoài)
+    
+    # Khoảng cách giữa các tầng (Tăng mật độ để khít hơn)
+    layer_step = leaf_l * 0.4
+    # Thêm 2 vòng để lấp đỉnh hoàn toàn
+    num_layers = math.ceil(vol_h / layer_step) + 2
+    
+    new_leaves = []
+    
+    # 3. QUÉT THEO TỪNG TẦNG Z
+    for l_idx in range(num_layers):
+        # Nội suy vị trí Z: đảm bảo tầng cuối cùng chạm đúng đỉnh
+        t_z = min(1.0, (l_idx * layer_step) / vol_h)
+        curr_z = min_z + (t_z * vol_h)
+        
+        # Độ cao tương đối cho các thông số khác
+        z_factor = t_z
+        
+        # --- LOGIC RỦ XUỐNG ĐỒNG BỘ ---
+        tilt_deg = -45 * (1.0 - z_factor) + (-10 * z_factor)
+        
+        # --- SCALE GIẢM DẦN THEO ĐỘ CAO ---
+        # Đáy: 1.1x, Đỉnh: 0.8x
+        height_sc = 1.1 - (z_factor * 0.3)
+
+        # Số lượng lá trên vòng tròn (Ước lượng chu vi tại tầng này)
+        # Bắn 4 tia hướng chính để tìm bán kính trung bình
+        test_dirs = [Vector((1,0,0)), Vector((-1,0,0)), Vector((0,1,0)), Vector((0,-1,0))]
+        radius_sum = 0
+        hits = 0
+        for td in test_dirs:
+            loc, norm, idx, dist = bvh.ray_cast(Vector((center_v.x, center_v.y, curr_z)), td)
+            if loc:
+                radius_sum += (loc - Vector((center_v.x, center_v.y, curr_z))).length
+                hits += 1
+        
+        avg_r = (radius_sum / hits) if hits > 0 else 0.5
+        circumference = 2 * math.pi * avg_r
+        
+        # Số lá = Chu vi / (Chiều rộng lá + Gap)
+        num_leaves_in_ring = math.ceil(circumference / (leaf_w * 0.9))
+        if num_leaves_in_ring < 3: num_leaves_in_ring = 3
+        
+        angle_step = (math.pi * 2) / num_leaves_in_ring
+        # So le: Hàng lẻ xoay lệch nửa bước
+        angle_offset = (angle_step / 2) if l_idx % 2 != 0 else 0
+        
+        for s_idx in range(num_leaves_in_ring):
+            angle = angle_offset + (s_idx * angle_step)
+            ray_dir = Vector((math.cos(angle), math.sin(angle), 0))
+            ray_origin = Vector((center_v.x, center_v.y, curr_z))
+            
+            # Bắn tia tìm điểm đặt lá trên mặt khối
+            loc, norm, idx, dist = bvh.ray_cast(ray_origin, ray_dir)
+            
+            if loc:
+                source = random.choice(leaf_samples)
+                new_l = source.copy()
+                new_l.data = source.data.copy()
+                context.collection.objects.link(new_l)
+                new_leaves.append(new_l)
+                
+                new_l.location = loc
+                
+                # XOAY:
+                # 1. Hướng Y (dài) ra ngoài theo Ray Dir
+                # 2. Hướng Z (mặt dẹt) theo Normal để bám form
+                # Blend Normal với Vector Up để lá nằm ngang nhiều hơn
+                up_vec = Vector((0, 0, 1))
+                blended_normal = (norm * 0.3 + up_vec * 0.7).normalized()
+                
+                q_base = ray_dir.to_track_quat('Y', 'Z')
+                
+                # Áp dụng Tilt (xoay quanh trục X local của lá)
+                m_tilt = Matrix.Rotation(math.radians(tilt_deg), 4, 'X')
+                # Random jitter nhẹ
+                m_jitter = Matrix.Rotation(math.radians(random.uniform(-3, 3)), 4, 'Z')
+                
+                new_l.rotation_mode = 'QUATERNION'
+                new_l.rotation_quaternion = (q_base.to_matrix().to_4x4() @ m_tilt @ m_jitter).to_quaternion()
+                
+                # SCALE: Co giãn theo độ cao + Biến thiên ngẫu nhiên chiều dài (Y)
+                new_l.scale *= height_sc * random.uniform(0.9, 1.1)
+                new_l.scale.y *= random.uniform(0.85, 1.2) # Jitter chiều dài tạo sự tự nhiên
+
+    bm.free()
+    eval_obj.to_mesh_clear()
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã tạo tán lá lợp ngói: {len(new_leaves)} lá ({num_layers} tầng).")
+
+def cut_objects_by_volume(self, context, cutter_obj, target_objs):
+    """
+    Cắt hàng loạt vật thể (ngói, gạch) theo khối khuôn (Cutter)
+    mà không join chúng lại, sử dụng Boolean Intersect.
+    """
+    if not cutter_obj or not target_objs:
+        self.report({'WARNING'}, "Cần chọn các vật thể mục tiêu và khối khuôn Active.")
+        return
+
+    # Tạm thời chuyển sang Object Mode nếu đang ở chế độ khác
+    if context.active_object and context.active_object.mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Đảm bảo khối khuôn có dữ liệu mesh
+    if cutter_obj.type != 'MESH':
+        self.report({'ERROR'}, "Khối khuôn (Active) phải là một Mesh.")
+        return
+
+    processed_count = 0
+    removed_count = 0
+    
+    # Ẩn khối khuôn để dễ quan sát (tùy chọn)
+    # original_cutter_hide = cutter_obj.hide_viewport
+    # cutter_obj.hide_viewport = True
+
+    # Danh sách các object sẽ bị xóa nếu rỗng sau khi cắt
+    to_remove = []
+
+    for obj in target_objs:
+        if obj == cutter_obj or obj.type != 'MESH':
+            continue
+            
+        # Thêm Boolean Modifier
+        bool_mod = obj.modifiers.new(name="Auto_Cut", type='BOOLEAN')
+        bool_mod.operation = 'INTERSECT'
+        bool_mod.object = cutter_obj
+        bool_mod.solver = 'EXACT' # Sửa lỗi: Dùng EXACT cho Blender 5.0
+        
+        # Áp dụng (Apply) modifier
+        context.view_layer.objects.active = obj
+        bpy.ops.object.modifier_apply(modifier=bool_mod.name)
+        
+        # Kiểm tra nếu mesh rỗng sau khi cắt (nằm ngoài hoàn toàn)
+        if len(obj.data.vertices) == 0:
+            to_remove.append(obj)
+            removed_count += 1
+        else:
+            processed_count += 1
+
+    # Xóa các object rỗng
+    if to_remove:
+        bpy.ops.object.select_all(action='DESELECT')
+        for obj in to_remove:
+            obj.select_set(True)
+        bpy.ops.object.delete()
+    
+    # Khôi phục vật thể Active ban đầu
+    context.view_layer.objects.active = cutter_obj
+    cutter_obj.select_set(True)
+
+    self.report({'INFO'}, f"Đã cắt xong: {processed_count} viên giữ lại, {removed_count} viên bị loại bỏ.")
+
+def generate_smart_bridge(self, context, curve_obj, bridge_samples):
+    """
+    Trải các tấm ván mẫu dọc theo đường Curve (Chỉ ván sàn).
+    """
+    if not curve_obj or len(bridge_samples) < 1:
+        self.report({'WARNING'}, "Cần chọn ít nhất 1 mẫu ván sàn và 1 đường Curve (Active).")
+        return
+
+    deck_sample = bridge_samples[0]
+
+    # 1. SAMPLING ĐƯỜNG CONG
+    temp_empty = bpy.data.objects.new("Bridge_Sampler", None)
+    context.collection.objects.link(temp_empty)
+    constraint = temp_empty.constraints.new('FOLLOW_PATH')
+    constraint.target = curve_obj
+    constraint.use_fixed_location = True
+
+    def get_curve_info(factor):
+        constraint.offset_factor = max(0.0, min(1.0, factor))
+        context.view_layer.update()
+        pos = temp_empty.matrix_world.to_translation()
+        
+        delta = 0.005
+        constraint.offset_factor = max(0.0, factor - delta)
+        context.view_layer.update()
+        pos_prev = temp_empty.matrix_world.to_translation()
+        tangent = (pos - pos_prev).normalized()
+        return pos, tangent
+
+    # 2. PHÂN TÍCH KÍCH THƯỚC MẪU VÁN
+    d_dims = deck_sample.dimensions
+    # Xác định trục nào là chiều rộng (hướng đi của cầu)
+    if d_dims.x < d_dims.y:
+        plank_w = d_dims.x
+        deck_track_axis = 'X'
+    else:
+        plank_w = d_dims.y
+        deck_track_axis = 'Y'
+
+    curve_len = 0
+    for spline in curve_obj.data.splines: curve_len += spline.calc_length()
+    
+    # 3. THỰC THI TRẢI VÁN
+    GAP = 0.01 # Khoảng hở 1cm
+    step_deck = plank_w + GAP
+    num_planks = int(curve_len / step_deck)
+    if num_planks < 2: num_planks = 2
+    
+    for i in range(num_planks):
+        factor = i / (num_planks - 1)
+        pos, tan = get_curve_info(factor)
+        
+        new_d = deck_sample.copy()
+        new_d.data = deck_sample.data.copy()
+        context.collection.objects.link(new_d)
+        
+        new_d.location = pos
+        new_d.rotation_mode = 'QUATERNION'
+        # Xoay ván: Trục rộng hướng theo Curve, mặt phẳng dẹt hướng lên
+        new_d.rotation_quaternion = tan.to_track_quat(deck_track_axis, 'Z')
+        
+        # Random nhẹ tỷ lệ cho tự nhiên
+        new_d.scale.y *= random.uniform(0.95, 1.05)
+
+    bpy.data.objects.remove(temp_empty, do_unlink=True)
+    self.report({'INFO'}, f"Đã trải xong {num_planks} tấm ván dọc theo Curve.")
+
+    bpy.data.objects.remove(temp_empty, do_unlink=True)
+    self.report({'INFO'}, f"Đã hoàn thành cầu: {num_planks} ván, dầm bám sát Curve.")
+
+    bpy.data.objects.remove(temp_empty, do_unlink=True)
+    self.report({'INFO'}, f"Đã hoàn thành cầu đơn giản: {num_steps} phân đoạn.")

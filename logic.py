@@ -1445,6 +1445,13 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         logic_upgrade.create_stylized_tree(self, context)
         return
 
+    elif alignMethod == 'FILL_SHINGLED_CANOPY':
+        active_obj = context.active_object
+        leaves = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and leaves:
+            logic_upgrade.generate_shingled_canopy(self, context, active_obj, leaves)
+        return
+
     elif alignMethod == 'FILL_STONE_HOUSE':
         active_obj = context.active_object
         bricks = [obj for obj in context.selected_objects if obj != active_obj]
@@ -1478,6 +1485,20 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         bricks = [obj for obj in context.selected_objects if obj != active_obj]
         if active_obj and bricks:
             logic_upgrade.generate_wall_accents_v2(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'CUT_BY_VOLUME':
+        cutter = context.active_object
+        targets = [obj for obj in context.selected_objects if obj != cutter]
+        if cutter and targets:
+            logic_upgrade.cut_objects_by_volume(self, context, cutter, targets)
+        return
+
+    elif alignMethod == 'GENERATE_SMART_BRIDGE':
+        active_obj = context.active_object
+        samples = [obj for obj in context.selected_objects if obj != active_obj]
+        if active_obj and active_obj.type == 'CURVE' and samples:
+            logic_upgrade.generate_smart_bridge(self, context, active_obj, samples)
         return
 
     elif alignMethod == 'FILL_STONE_HOUSE_V2':
