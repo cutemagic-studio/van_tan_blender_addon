@@ -1286,6 +1286,67 @@ def deform_stylized_canopy(self, context, canopy_objs):
     context.view_layer.update()
     self.report({'INFO'}, f"Đã tạo {len(canopy_objs)} tán cây độc bản.")
 
+def deform_stylized_trunk(self, context, trunk_objs):
+    """
+    Biến dạng trực tiếp khối trụ mesh (đã được uốn dáng) thành thân cây Stylized.
+    - Làm mượt dáng uốn lượn.
+    - Tạo móp méo bề mặt vỏ cây.
+    - Tự động bóp dáng phình gốc thu ngọn.
+    """
+    if not trunk_objs: return
+
+    for obj in trunk_objs:
+        if obj.type != 'MESH': continue
+        
+        context.view_layer.objects.active = obj
+        
+        # 1. TỰ ĐỘNG PHÌNH GỐC - THU NGỌN (DỰA TRÊN TỌA ĐỘ LOCAL)
+        bm = bmesh.new()
+        bm.from_mesh(obj.data)
+        
+        # Tìm giới hạn Z để xác định gốc và ngọn
+        z_coords = [v.co.z for v in bm.verts]
+        if z_coords:
+            min_z = min(z_coords)
+            max_z = max(z_coords)
+            height = max_z - min_z
+            
+            if height > 0:
+                for v in bm.verts:
+                    # Tỉ lệ cao độ từ 0 (đáy) đến 1 (ngọn)
+                    t = (v.co.z - min_z) / height
+                    # Gốc phình 1.3, ngọn thu 0.4
+                    f = 1.3 * (1.0 - t)**0.5 + 0.4 * t
+                    v.co.x *= f
+                    v.co.y *= f
+        
+        bm.to_mesh(obj.data)
+        bm.free()
+
+        # 2. LÀM MƯỢT DÁNG TỔNG THỂ (Gỡ bỏ sự gãy khúc nếu uốn tay)
+        lap_smooth = obj.modifiers.new(name="Trunk_Relax", type='LAPLACIANSMOOTH')
+        lap_smooth.iterations = 5
+        lap_smooth.lambda_border = 0.5
+        
+        # 3. TẠO MÓP MÉO VỎ CÂY (LOGIC TÁN CÂY)
+        tex_name = f"Tex_Trunk_{obj.name}_{random.randint(10, 99)}"
+        tex = bpy.data.textures.new(name=tex_name, type='CLOUDS')
+        tex.noise_scale = 1.3
+        
+        disp = obj.modifiers.new(name="Trunk_Bumps", type='DISPLACE')
+        disp.texture = tex
+        disp.strength = 0.15 # Móp méo nhẹ
+        disp.mid_level = 0.5
+        
+        # 4. LÀM MƯỢT HOÀN THIỆN
+        smooth = obj.modifiers.new(name="Trunk_Final_Smooth", type='SMOOTH')
+        smooth.iterations = 15
+        
+        bpy.ops.object.shade_smooth()
+
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã hô biến {len(trunk_objs)} thân cây Stylized.")
+
 def attach_leaves_to_canopy(self, context, leaf_samples, canopy_obj, leaf_density=1.0):
     """
     Đính lá lên tán cây với mật độ có thể điều chỉnh.

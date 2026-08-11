@@ -3,6 +3,7 @@ import math
 import random
 import bmesh
 from . import logic_upgrade
+from . import logic_super
 from mathutils import Vector, Quaternion, Matrix
 from mathutils.bvhtree import BVHTree
 from .functions import object_tools
@@ -1472,6 +1473,14 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
             if leaf_samples:
                 logic_upgrade.attach_leaves_to_canopy(self, context, leaf_samples, active_obj)
         return
+    elif alignMethod == 'GENERATE_CHUNKY_FOLIAGE':
+        active_obj = context.active_object
+        selected = context.selected_objects
+        if active_obj and active_obj.type == 'MESH':
+            leaf_samples = [obj for obj in selected if obj != active_obj and obj.type == 'MESH']
+            if leaf_samples:
+                logic_upgrade.attach_leaves_to_canopy(self, context, leaf_samples, active_obj, 3)
+        return
 
     elif alignMethod == 'FILL_SHINGLED_CANOPY':
         active_obj = context.active_object
@@ -1499,6 +1508,59 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         bricks = [obj for obj in context.selected_objects if obj != active_obj]
         if active_obj and bricks:
             logic_upgrade.generate_wall_accents(self, context, active_obj, bricks)
+        return
+
+    elif alignMethod == 'GENERATE_ISLAND_BASE':
+        selected = context.selected_objects
+        if len(selected) < 2: return
+        
+        # Tự động phân loại: 9 vật thể to nhất là Proxy, còn lại là Stone Samples
+        sorted_objs = sorted(selected, key=lambda o: o.dimensions.length, reverse=True)
+        proxies = sorted_objs[:9]  
+        stones = sorted_objs[9:]   
+        
+        if not stones: 
+            stones = [sorted_objs[-1]]
+            proxies = sorted_objs[:-1]
+
+        logic_super.generate_island_base_from_proxies(self, context, proxies, stones, density=1.0)
+        return
+
+    elif alignMethod == 'HIGHLIGHT_OCCLUDED':
+        selected = context.selected_objects
+        if selected:
+            logic_super.highlight_occluded_objects(self, context, selected)
+        return
+
+    elif alignMethod == 'ATTACH_ISLAND_VINE':
+        active_obj = context.active_object
+        # Chọn các vật thể Mesh làm mẫu (không phải active object)
+        selected_samples = [o for o in context.selected_objects if o != active_obj and o.type == 'MESH']
+        if active_obj and active_obj.type == 'MESH' and selected_samples:
+            logic_super.attach_vines_to_merged_island(self, context, active_obj, selected_samples)
+        return
+
+    elif alignMethod == 'ATTACH_ISLAND_ROOT':
+        active_obj = context.active_object
+        # Chọn các vật thể Mesh làm mẫu (không phải active object)
+        selected_samples = [o for o in context.selected_objects if o != active_obj and o.type == 'MESH']
+        if active_obj and active_obj.type == 'MESH' and selected_samples:
+            logic_super.attach_roots_to_merged_island(self, context, active_obj, selected_samples)
+        return
+
+    elif alignMethod == 'ATTACH_ISLAND_MINERAL':
+        active_obj = context.active_object
+        selected_meshes = [o for o in context.selected_objects if o != active_obj and o.type == 'MESH']
+        if active_obj and active_obj.type == 'MESH' and selected_meshes:
+            logic_super.attach_minerals_to_merged_island(self, context, active_obj, selected_meshes)
+        return
+
+    elif alignMethod == 'DEFORM_TRUNK':
+        selected = [o for o in context.selected_objects if o.type == 'MESH']
+        if selected:
+            logic_upgrade.deform_stylized_trunk(self, context, selected)
+        else:
+            self.report({'WARNING'}, "Vui lòng chọn ít nhất 1 Mesh (thân cây) để thực hiện.")
         return
 
     elif alignMethod == 'FILL_CORNER_PILLARS_V2':
@@ -1542,6 +1604,8 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         if active_obj and tiles:
             logic_upgrade.generate_stylized_roof(self, context, active_obj, tiles)
         return
+
+
 
     return
 

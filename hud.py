@@ -584,6 +584,14 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong18d = col.operator("vt.object_action", text="GENERATE_STYLIZED_STREAM (XYZ)", icon='BACK')
                 thaoTacQuanTrong19d = col.operator("vt.object_action", text="DEFORM_CANOPY (XYZ)", icon='BACK')
                 thaoTacQuanTrong20d = col.operator("vt.object_action", text="ATTACH_LEAVES_TO_CANOPY (XYZ)", icon='BACK')
+                thaoTacQuanTrong21d = col.operator("vt.object_action", text="GENERATE_ISLAND_BASE (XYZ)", icon='BACK')
+                thaoTacQuanTrong22d = col.operator("vt.object_action", text="HIGHLIGHT_OCCLUDED (XYZ)", icon='BACK')
+
+                thaoTacQuanTrong23d = col.operator("vt.object_action", text="ATTACH_ISLAND_VINE (XYZ)", icon='BACK')
+                thaoTacQuanTrong24d = col.operator("vt.object_action", text="ATTACH_ISLAND_ROOT (XYZ)", icon='BACK')
+                thaoTacQuanTrong25d = col.operator("vt.object_action", text="ATTACH_ISLAND_MINERAL (XYZ)", icon='BACK')
+                thaoTacQuanTrong26d = col.operator("vt.object_action", text="DEFORM_TRUNK (XYZ)", icon='BACK')
+                thaoTacQuanTrong27d = col.operator("vt.object_action", text="GENERATE_CHUNKY_FOLIAGE (XYZ)", icon='BACK')
 
                 thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
@@ -622,6 +630,14 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong18d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_STYLIZED_STREAM.Z'
                 thaoTacQuanTrong19d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.DEFORM_CANOPY.Z'
                 thaoTacQuanTrong20d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ATTACH_LEAVES.Z'
+                thaoTacQuanTrong21d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_ISLAND_BASE.Z'
+                thaoTacQuanTrong22d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.HIGHLIGHT_OCCLUDED.Z'
+
+                thaoTacQuanTrong23d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ATTACH_ISLAND_VINE.Z'
+                thaoTacQuanTrong24d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ATTACH_ISLAND_ROOT.Z'
+                thaoTacQuanTrong25d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ATTACH_ISLAND_MINERAL.Z'
+                thaoTacQuanTrong26d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.DEFORM_TRUNK.Z'
+                thaoTacQuanTrong27d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_CHUNKY_FOLIAGE.Z'
 
                 thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CREATE_STYLIZED_TREE.Z'
 
