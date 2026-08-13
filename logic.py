@@ -184,7 +184,7 @@ def arrange_objects_grid(context, config, direction='X++', is_make_lastest_creat
             obj.location = origin_loc + offset
 
 
-def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
+def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWEEN'):
     print("alignMethod - {alignMethod}")
 
     if alignMethod == 'CENTER_BETWEEN':
@@ -1479,7 +1479,7 @@ def arrange_only(self, context, direction='Z', alignMethod='CENTER_BETWEEN'):
         if active_obj and active_obj.type == 'MESH':
             leaf_samples = [obj for obj in selected if obj != active_obj and obj.type == 'MESH']
             if leaf_samples:
-                logic_upgrade.attach_leaves_to_canopy(self, context, leaf_samples, active_obj, 3)
+                logic_upgrade.attach_leaves_to_canopy(self, context, leaf_samples, active_obj, config.mat_do_la_cay_tren_tan_cay)
         return
 
     elif alignMethod == 'FILL_SHINGLED_CANOPY':

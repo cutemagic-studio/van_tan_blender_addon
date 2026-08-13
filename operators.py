@@ -673,7 +673,7 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             # Gọi logic xử lý hướng (Lấy phần cuối của chuỗi action)
             direction = self.action.split('.')[-1] 
             alignMethod = self.action.split('.')[-2]
-            logic.arrange_only(self, context, direction, alignMethod)
+            logic.arrange_only(self, context, context.scene.cmc_sorting_config, direction, alignMethod)
             
             # self.report({'INFO'}, f"Đã sắp xếp theo hướng {direction} - {alignMethod}")
     

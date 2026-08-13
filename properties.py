@@ -10,6 +10,17 @@ class CMC_SortingConfig(bpy.types.PropertyGroup):
         unit='LENGTH'
     ) # type: ignore
 
+    # --- PHẦN LOGIC LÁ
+
+    # Mật độ lá cây trên tán cây
+    mat_do_la_cay_tren_tan_cay: bpy.props.FloatProperty(
+        name="Mật độ lá cây",
+        description="Mật độ lá cây",
+        default=1,
+        min=0.1,
+        unit='LENGTH'
+    ) # type: ignore
+
 
     # --- PHẦN LOGIC LƯỚI (GRID) ---
     

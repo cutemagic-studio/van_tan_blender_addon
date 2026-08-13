@@ -1402,8 +1402,9 @@ def attach_leaves_to_canopy(self, context, leaf_samples, canopy_obj, leaf_densit
             
         z_factor = (pos.z - min_z) / vol_h if vol_h > 0 else 0.5
         # Không mọc lá ở 25% phần dưới đáy
-        if z_factor < 0.25: continue
-            
+        # if z_factor < 0.25: continue
+        if z_factor < 0.15: continue
+
         # KIỂM TRA CHỒNG LẤP
         is_too_close = False
         for p in placed_locations:

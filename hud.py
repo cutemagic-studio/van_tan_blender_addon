@@ -548,7 +548,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             sub_row.prop(ui, "show_can_chinh_theo_truc_xyz", text="Căn chỉnh theo trục XYZ", icon='LINENUMBERS_ON', emboss=False)
             sub_row.label(text="", icon=sub_icon)
 
-            if ui.show_can_chinh_theo_truc_z:
+            if ui.show_can_chinh_theo_truc_xyz:
                 col = sub_box.column(align=True)
                 thaoTacQuanTrong01d = col.operator("vt.object_action", text="Fit Uniform (XYZ)", icon='BACK')
                 thaoTacQuanTrong02d = col.operator("vt.object_action", text="Smart Diagonal Step (XYZ)", icon='BACK')
@@ -760,6 +760,14 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
                 col.scale_y = 1.5
             #
+
+            settings_box = main_box.box()
+            settings_box.label(text="Config Mật Độ Lá Trên Tán Cây:", icon='LINENUMBERS_ON')
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "mat_do_la_cay_tren_tan_cay", text="Mật Độ Lá")
+
+            #####
             
             settings_box = main_box.box()
             settings_box.label(text="Config Sắp Xếp Trục Ngang (XY):", icon='LINENUMBERS_ON')
