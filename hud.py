@@ -594,6 +594,12 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong26d = col.operator("vt.object_action", text="DEFORM_TRUNK (XYZ)", icon='BACK')
                 thaoTacQuanTrong27d = col.operator("vt.object_action", text="GENERATE_CHUNKY_FOLIAGE (XYZ)", icon='BACK')
 
+                thaoTacQuanTrong28 = col.operator("vt.object_action", text="TẠO DẢI CỎ BIÊN (XYZ)", icon='BACK')
+
+                thaoTacQuanTrong29 = col.operator("vt.object_action", text="TẠO SÂN ĐÁ (PAVEMENT)", icon='BACK')
+                thaoTacQuanTrong30 = col.operator("vt.object_action", text="LÁT ĐÁ THEO HÌNH DÁNG YÊU CẦU", icon='BACK')
+                thaoTacQuanTrong31 = col.operator("vt.object_action", text="TẠO VIÊN ĐÁ", icon='BACK')
+
                 thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
                 thaoTacQuanTrong01d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FIT_UNIFORM.Z'
@@ -641,7 +647,13 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong26d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.DEFORM_TRUNK.Z'
                 thaoTacQuanTrong27d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_CHUNKY_FOLIAGE.Z'
 
-                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_GRASS_OVERHANG.Z'
+                thaoTacQuanTrong28.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_GRASS_OVERHANG.Z'
+                thaoTacQuanTrong29.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_PAVEMENT.Z'
+                thaoTacQuanTrong30.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_PAVEMENT_THEO_HINH_DANG_YEU_CAU.Z'
+
+                thaoTacQuanTrong31.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_chunky_stylized_rock.Z'
+
+                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_island_blockout.Z'
 
 
                 col.scale_y = 1.5
@@ -777,8 +789,8 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             row_settings = settings_box.row(align=True)
             row_settings.prop(cfg, "grass_max_length", text="Chiều dài dải cỏ rủ MAX")
 
-            row_settings = settings_box.row(align=True)
-            row_settings.prop(cfg, "wave_amplitude", text="Biên độ vấp nhô")
+            # row_settings = settings_box.row(align=True)
+            # row_settings.prop(cfg, "wave_amplitude", text="Biên độ vấp nhô")
 
             row_settings = settings_box.row(align=True)
             row_settings.prop(cfg, "wave_frequency", text="Quãng sóng (Độ thoải/dốc)")
@@ -791,6 +803,34 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
             row_settings = settings_box.row(align=True)
             row_settings.prop(cfg, "bevel_width", text="Độ Bo Cạnh")
+
+            #####
+
+            settings_box = main_box.box()
+            settings_box.label(text="Config Khuôn viên lát đá:", icon='LINENUMBERS_ON')
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "pavement_area_size", text="Kích Thước Sân")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "pavement_random_seed", text="Độ Ngẫu Nhiên")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "pavement_subdivisions", text="Mật Độ Đá")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "pavement_gap_size", text="Khe Hở (Gap)")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "pavement_thickness", text="Độ Dày Đá")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "pavement_bevel_h", text="Bo Cạnh Ngang")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "pavement_bevel_v", text="Bo Cạnh Dọc")
+
+
 
             #####
             

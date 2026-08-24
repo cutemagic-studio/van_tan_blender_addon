@@ -4,6 +4,7 @@ import random
 import bmesh
 from . import logic_upgrade
 from . import logic_super
+from . import logic_high_upgrade
 from mathutils import Vector, Quaternion, Matrix
 from mathutils.bvhtree import BVHTree
 from .functions import object_tools
@@ -1628,6 +1629,45 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         )
         return
 
+    elif alignMethod == 'GENERATE_PAVEMENT':
+        # Gọi hàm từ module chứa logic (giả sử là logic_upgrade)
+        logic_high_upgrade.generate_stylized_pavement(
+            self,
+            context,
+            area_size = config.pavement_area_size,           # Ví dụ: 5.0
+            subdivisions = config.pavement_subdivisions,     # Ví dụ: 12 (số lượng chia lưới)
+            gap_size = config.pavement_gap_size,             # Ví dụ: 0.04 (khoảng cách giữa các viên đá)
+            thickness = config.pavement_thickness,           # Ví dụ: 0.15 (độ dày viên đá)
+            bevel_h = config.pavement_bevel_h,
+            bevel_v = config.pavement_bevel_v,
+            random_seed = config.pavement_random_seed,
+        )
+        return
+
+    elif alignMethod == 'GENERATE_PAVEMENT_THEO_HINH_DANG_YEU_CAU':
+        active_obj = context.active_object
+        # Gọi hàm từ module chứa logic (giả sử là logic_upgrade)
+        logic_high_upgrade.generate_stylized_pavement_theo_hinh_dang_yeu_cau(
+            self,
+            context,
+            active_obj,
+            area_size = config.pavement_area_size,           # Ví dụ: 5.0
+            subdivisions = config.pavement_subdivisions,     # Ví dụ: 12 (số lượng chia lưới)
+            gap_size = config.pavement_gap_size,             # Ví dụ: 0.04 (khoảng cách giữa các viên đá)
+            thickness = config.pavement_thickness,           # Ví dụ: 0.15 (độ dày viên đá)
+            bevel_h = config.pavement_bevel_h,
+            bevel_v = config.pavement_bevel_v,
+            random_seed = config.pavement_random_seed,
+        )
+        return
+
+    elif alignMethod == 'generate_island_blockout':
+        logic_high_upgrade.generate_island_blockout()
+        return
+
+    elif alignMethod == 'generate_chunky_stylized_rock':
+        logic_high_upgrade.generate_chunky_stylized_rock(self, context)
+        return
 
 
     return

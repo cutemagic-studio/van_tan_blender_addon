@@ -103,6 +103,69 @@ class CMC_SortingConfig(bpy.types.PropertyGroup):
     )
     """Tạo dải cỏ rủ Stylized bao quanh khối đất"""
 
+    # --- PHẦN LOGIC TẠO SÂN ĐÁ STYLIZED (PAVEMENT) ---
+
+    pavement_area_size: bpy.props.FloatProperty(
+        name="Kích Thước Sân",
+        description="Kích thước tổng thể của vùng sân đá",
+        default=5.0,
+        min=1.0,
+        unit='LENGTH'
+    ) # type: ignore
+
+    pavement_random_seed: bpy.props.FloatProperty(
+        name="Độ Ngẫu Nhiên",
+        description="Thay đổi hình dáng sắp xếp ngẫu nhiên",
+        default=0.04,
+        min=0.0,
+        max=0.5,
+        step=1
+    ) # type: ignore
+
+    pavement_subdivisions: bpy.props.IntProperty(
+        name="Mật Độ Đá",
+        description="Số lượng phân chia lưới (chia càng nhiều, đá càng nhỏ và nhiều)",
+        default=12,
+        min=2,
+        max=100
+    ) # type: ignore
+
+    pavement_gap_size: bpy.props.FloatProperty(
+        name="Khe Hở (Gap)",
+        description="Khoảng cách giữa các viên đá",
+        default=0.04,
+        min=0.0,
+        max=0.5,
+        step=1
+    ) # type: ignore
+
+    pavement_thickness: bpy.props.FloatProperty(
+        name="Độ Dày Đá",
+        description="Độ nổi/chiều cao của viên đá",
+        default=0.15,
+        min=0.01,
+        max=1.0,
+        step=1
+    ) # type: ignore
+
+    pavement_bevel_h: bpy.props.FloatProperty(
+        name="Bo Cạnh Ngang",
+        description="Độ bo tròn cho mặt trên và mặt đáy của viên đá",
+        default=0.015,
+        min=0.0,
+        max=0.5,
+        step=1
+    ) # type: ignore
+
+    pavement_bevel_v: bpy.props.FloatProperty(
+        name="Bo Cạnh Dọc",
+        description="Độ bo tròn cho các góc dựng đứng bao quanh viên đá",
+        default=0.04,
+        min=0.0,
+        max=0.5,
+        step=1
+    ) # type: ignore
+
     # --- PHẦN LOGIC LƯỚI (GRID) ---
     
     # TRỤC NGANG
