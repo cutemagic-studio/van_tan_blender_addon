@@ -1380,6 +1380,109 @@ def export_all_object_to_fbx(context, export_folder="E:/Unity_Projects/VanTan_Cu
     print(f"DONE EXPORT: {len(selected_objs)} files in {export_folder}")
     return True
 
+def get_collection_path(collection, scene_collection):
+    """
+    Truy ngược từ collection lên cha để lấy đường dẫn cây thư mục.
+    """
+    path_parts = []
+    curr = collection
+    
+    # Lặp ngược lên cho đến khi gặp Scene Collection hoặc không còn cha
+    # Lưu ý: Một collection có thể có nhiều cha, ta lấy cha đầu tiên trong hierarchy
+    while curr and curr != scene_collection:
+        path_parts.append(curr.name)
+        # Tìm cha của collection này
+        parent = None
+        for col in bpy.data.collections:
+            if curr.name in col.children:
+                parent = col
+                break
+        curr = parent
+        
+    path_parts.reverse()
+    return os.path.join(*path_parts) if path_parts else ""
+
+def export_all_object_to_fbx_upgrade(context, export_folder="E:/Unity_Projects/VanTan_CuteMagic/Assets/Models/"):
+    """
+    Phiên bản nâng cấp: Xuất FBX giữ nguyên cây thư mục (Folder Tree) theo Collection.
+    """
+    selected_objs = context.selected_objects[:]
+    if not selected_objs:
+        selected_objs = bpy.context.scene.objects[:]
+    
+    if len(selected_objs) == 0:
+        utils.show_detailed_message(["Không có Object nào để Export!"], title="Lỗi", icon='ERROR')
+        return False
+
+    exported_count = 0
+    scene_collection = context.scene.collection
+
+    for obj in selected_objs:
+        if obj.type != 'MESH':
+            continue
+
+        # --- XÁC ĐỊNH ĐƯỜNG DẪN CÂY THƯ MỤC ---
+        target_subpath = ""
+        if obj.users_collection:
+            # Lấy collection đầu tiên mà object này thuộc về
+            main_col = obj.users_collection[0]
+            if main_col != scene_collection:
+                target_subpath = get_collection_path(main_col, scene_collection)
+        
+        final_export_dir = os.path.join(export_folder, target_subpath)
+        
+        # Đảm bảo cây thư mục tồn tại
+        if not os.path.exists(final_export_dir):
+            os.makedirs(final_export_dir)
+
+        # --- THỰC THI LOGIC CHUẨN HÓA ---
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        context.view_layer.objects.active = obj
+
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+        mesh = obj.data
+        verts = [v.co for v in mesh.vertices]
+        if not verts: continue
+        
+        min_z = min(v.z for v in verts)
+        min_x = min(v.x for v in verts)
+        max_x = max(v.x for v in verts)
+        min_y = min(v.y for v in verts)
+        max_y = max(v.y for v in verts)
+
+        center_x = (min_x + max_x) / 2
+        center_y = (min_y + max_y) / 2
+        offset = Vector((center_x, center_y, min_z))
+
+        for v in mesh.vertices:
+            v.co -= offset
+        mesh.update()
+
+        obj.location = (0, 0, 0)
+
+        # --- EXPORT FBX ---
+        clean_name = obj.name.rsplit('.', 1)[0]
+        filepath = os.path.join(final_export_dir, f"{clean_name}.fbx")
+
+        bpy.ops.export_scene.fbx(
+            filepath=filepath,
+            use_selection=True,
+            axis_forward='-Z',
+            axis_up='Y',
+            apply_unit_scale=True,
+            apply_scale_options='FBX_SCALE_ALL',
+            bake_space_transform=True
+        )
+        exported_count += 1
+
+    msg = [f"Export Thành Công {exported_count} File FBX", f"Cây thư mục đã được dựng chính xác."]
+    utils.show_detailed_message(msg, title="Export Cây Thư Mục Thành Công", icon='CHECKMARK')
+    
+    print(f"DONE TREE EXPORT: {exported_count} files in {export_folder}")
+    return True
+
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____
 #|||||_____|||||_____
 #|||||_____||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||_____

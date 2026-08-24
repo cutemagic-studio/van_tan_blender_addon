@@ -583,6 +583,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
                 thaoTacQuanTrong18d = col.operator("vt.object_action", text="GENERATE_STYLIZED_STREAM (XYZ)", icon='BACK')
                 thaoTacQuanTrong19d = col.operator("vt.object_action", text="DEFORM_CANOPY (XYZ)", icon='BACK')
+                thaoTacQuanTrong19d2 = col.operator("vt.object_action", text="DEFORM_CANOPY_2 (XYZ)", icon='BACK')
                 thaoTacQuanTrong20d = col.operator("vt.object_action", text="ATTACH_LEAVES_TO_CANOPY (XYZ)", icon='BACK')
                 thaoTacQuanTrong21d = col.operator("vt.object_action", text="GENERATE_ISLAND_BASE (XYZ)", icon='BACK')
                 thaoTacQuanTrong22d = col.operator("vt.object_action", text="HIGHLIGHT_OCCLUDED (XYZ)", icon='BACK')
@@ -629,6 +630,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
                 thaoTacQuanTrong18d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_STYLIZED_STREAM.Z'
                 thaoTacQuanTrong19d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.DEFORM_CANOPY.Z'
+                thaoTacQuanTrong19d2.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.DEFORM_CANOPY_2.Z'
                 thaoTacQuanTrong20d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.ATTACH_LEAVES.Z'
                 thaoTacQuanTrong21d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_ISLAND_BASE.Z'
                 thaoTacQuanTrong22d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.HIGHLIGHT_OCCLUDED.Z'
@@ -639,7 +641,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong26d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.DEFORM_TRUNK.Z'
                 thaoTacQuanTrong27d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_CHUNKY_FOLIAGE.Z'
 
-                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.CREATE_STYLIZED_TREE.Z'
+                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_GRASS_OVERHANG.Z'
 
 
                 col.scale_y = 1.5
@@ -766,6 +768,29 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
             row_settings = settings_box.row(align=True)
             row_settings.prop(cfg, "mat_do_la_cay_tren_tan_cay", text="Mật Độ Lá")
+
+            #####
+            settings_box = main_box.box()
+            settings_box.label(text="Tạo dải cỏ rủ:", icon='LINENUMBERS_ON')
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "grass_min_length", text="Chiều dài dải cỏ rủ MIN")
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "grass_max_length", text="Chiều dài dải cỏ rủ MAX")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "wave_amplitude", text="Biên độ vấp nhô")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "wave_frequency", text="Quãng sóng (Độ thoải/dốc)")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "grass_thickness", text="Độ Dày")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "segment_length", text="Độ Giãn Lưới")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "bevel_width", text="Độ Bo Cạnh")
 
             #####
             

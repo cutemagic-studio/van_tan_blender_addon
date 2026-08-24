@@ -2,7 +2,7 @@ import bpy
 import math
 import random
 import bmesh
-from mathutils import Vector, Quaternion, Matrix
+from mathutils import Vector, Quaternion, Matrix, noise
 from mathutils.bvhtree import BVHTree
 
 def get_world_bounds(obj):
@@ -1286,6 +1286,50 @@ def deform_stylized_canopy(self, context, canopy_objs):
     context.view_layer.update()
     self.report({'INFO'}, f"Đã tạo {len(canopy_objs)} tán cây độc bản.")
 
+def deform_stylized_canopy_2(self, context, canopy_objs):
+    """
+    Biến dạng khối hiện có thành tán cây mây bằng Displacement + Voronoi.
+    Không thêm vật thể mới, chỉ làm móp méo mượt mà lưới hiện tại.
+    """
+    if not canopy_objs:
+        return
+
+    for obj in canopy_objs:
+        if obj.type != 'MESH': continue
+        
+        context.view_layer.objects.active = obj
+        
+        # 1. TĂNG MẬT ĐỘ LƯỚI VỪA PHẢI
+        # subdiv_mod = obj.modifiers.new(name="Canopy_Densify", type='SUBSURF')
+        # subdiv_mod.levels = 2
+        # subdiv_mod.render_levels = 2
+        
+        # 2. TẠO VORONOI TEXTURE VỚI TỈ LỆ VỪA (Cụm mây to và thoáng)
+        tex_name = f"Tex_Voronoi_{obj.name}_{random.randint(100, 999)}"
+        tex = bpy.data.textures.new(name=tex_name, type='VORONOI')
+        tex.noise_scale = random.uniform(1.2, 1.5) 
+        tex.intensity = 1.0
+        tex.distance_metric = 'DISTANCE' 
+        
+        # 3. ÁP DỤNG DISPLACE MODIFIER NHẸ NHÀNG
+        disp_mod = obj.modifiers.new(name="Cloud_Bumps", type='DISPLACE')
+        disp_mod.texture = tex
+        disp_mod.strength = random.uniform(0.6, 1.0)
+        disp_mod.mid_level = 0.1
+        
+        disp_mod.texture_coords = 'OBJECT'
+
+        # 4. LÀM MƯỢT HỮU CƠ
+        lap_smooth = obj.modifiers.new(name="Cloud_Relax", type='LAPLACIANSMOOTH')
+        lap_smooth.iterations = 18 
+        lap_smooth.lambda_factor = 1.0
+        
+        # 5. HOÀN THIỆN BỀ MẶT
+        bpy.ops.object.shade_smooth()
+
+    context.view_layer.update()
+    self.report({'INFO'}, f"Đã tạo {len(canopy_objs)} tán cây bồng bềnh (Voronoi Deform).")
+
 def deform_stylized_trunk(self, context, trunk_objs):
     """
     Biến dạng trực tiếp khối trụ mesh (đã được uốn dáng) thành thân cây Stylized.
@@ -1836,8 +1880,832 @@ def generate_smart_bridge(self, context, curve_obj, bridge_samples):
     bpy.data.objects.remove(temp_empty, do_unlink=True)
     self.report({'INFO'}, f"Đã trải xong {num_planks} tấm ván dọc theo Curve.")
 
-    bpy.data.objects.remove(temp_empty, do_unlink=True)
-    self.report({'INFO'}, f"Đã hoàn thành cầu: {num_planks} ván, dầm bám sát Curve.")
+def generate_grass_overhang_v1(self, context, soil_obj):
+    """
+    Tạo dải cỏ rủ Stylized bao quanh khối đất bằng logic hình sin ngẫu nhiên.
+    """
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất (Active Object) làm khuôn.")
+        return
 
-    bpy.data.objects.remove(temp_empty, do_unlink=True)
-    self.report({'INFO'}, f"Đã hoàn thành cầu đơn giản: {num_steps} phân đoạn.")
+    # 1. PHÂN TÍCH BIÊN (Boundary Detection)
+    # Lấy các cạnh biên của mặt trên cùng (Z+)
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+    
+    # Tìm các cạnh nằm ở mặt trên (Normal Z > 0.8) và là cạnh biên (chỉ thuộc về 1 mặt đứng)
+    boundary_edges = []
+    for edge in bm.edges:
+        # Cạnh biên trong trường hợp này là cạnh nối giữa mặt top và mặt side
+        # Hoặc đơn giản là các cạnh thuộc mặt có Normal hướng lên
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp trên khối đất.")
+        bm.free()
+        return
+
+    # 2. TẠO MESH MỚI CHO CỎ
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+    
+    gbm = bmesh.new()
+    
+    # Duyệt qua các cạnh biên để dựng dải cỏ
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0].co, edge.verts[1].co
+        edge_vec = v2 - v1
+        edge_len = edge_vec.length
+        
+        # Chia nhỏ đoạn thẳng để làm đường lượn sóng (mỗi 10cm 1 điểm)
+        num_segs = max(2, int(edge_len / 0.1))
+        
+        # Tìm hướng "xuống" và hướng "ra ngoài"
+        # Hướng ra ngoài (Normal ngang)
+        side_face = next(f for f in edge.link_faces if abs(f.normal.z) < 0.2)
+        out_dir = side_face.normal.normalized()
+        
+        # Tạo các quads dọc theo cạnh
+        prev_top_v = None
+        prev_bot_v = None
+        
+        # Seed ngẫu nhiên cho mỗi cạnh để hình sin không đều
+        seed_offset = random.uniform(0, 100)
+        frequency = random.uniform(8.0, 15.0)
+        amplitude = random.uniform(0.1, 0.25)
+        base_drop = 0.3 # Độ rủ cơ bản 30cm
+        
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.lerp(v2, t)
+            
+            # Đỉnh trên (bám vào mép đất)
+            v_top = gbm.verts.new(curr_pos)
+            
+            # Đỉnh dưới (tạo hình sin rủ xuống)
+            # z = -base_drop + biên độ * sin(t * tần số + seed) + noise
+            wave = math.sin(t * frequency + seed_offset) * amplitude
+            noise = random.uniform(-0.05, 0.05)
+            drop_z = -base_drop + wave + noise
+            
+            v_bot = gbm.verts.new(curr_pos + Vector((0, 0, drop_z)))
+            
+            if prev_top_v:
+                gbm.faces.new((prev_top_v, v_top, v_bot, prev_bot_v))
+            
+            prev_top_v = v_top
+            prev_bot_v = v_bot
+
+    # 3. TẠO ĐỘ DÀY (Extrude out)
+    # Di chuyển nhẹ ra ngoài 1cm để không bị z-fighting với đất
+    # và tạo độ dày bằng Solidify sau
+    
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    # 4. STYLIZED FINISH (Modifiers)
+    # Solidify: Tạo độ dày phồng
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = 0.08
+    sol_mod.offset = 1.0 # Đẩy ra ngoài
+    
+    # Bevel: Bo tròn mép cỏ
+    bev_mod = grass_obj.modifiers.new(name="Round_Edges", type='BEVEL')
+    bev_mod.width = 0.03
+    bev_mod.segments = 3
+    
+    # Subdiv: Làm mượt khối
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+    
+    context.view_layer.objects.active = grass_obj
+    bpy.ops.object.shade_smooth()
+    
+    # Gán màu xanh cỏ (nếu có material)
+    # logic_upgrade.assign_grass_material(grass_obj)
+
+    self.report({'INFO'}, "Đã tạo dải cỏ rủ hình sin ngẫu nhiên.")
+
+def generate_grass_overhang_v2(self, context, soil_obj):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    gbm = bmesh.new()
+
+    global_seed = random.uniform(0, 100)
+    frequency = random.uniform(8.0, 12.0)
+    amplitude = random.uniform(0.1, 0.25)
+    base_drop = 0.3
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0].co, edge.verts[1].co
+        edge_len = (v2 - v1).length
+        num_segs = max(2, int(edge_len / 0.1))
+
+        # 1. Lấy pháp tuyến mặt bên của đất làm chuẩn
+        side_face = next(f for f in edge.link_faces if abs(f.normal.z) < 0.2)
+        side_normal = side_face.normal.copy()
+
+        prev_top_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.lerp(v2, t)
+
+            wave_x = math.sin(curr_pos.x * frequency + global_seed)
+            wave_y = math.cos(curr_pos.y * frequency + global_seed)
+            wave = (wave_x + wave_y) * amplitude * 0.5
+
+            # 2. FIX NHIỄU: Dùng nhiễu toán học dựa trên tọa độ X/Y.
+            # Điều này đảm bảo tại điểm góc chung, cả 2 cạnh đều tính ra đúng 1 thông số nhiễu hệt nhau.
+            noise = math.sin(curr_pos.x * 45.0 + curr_pos.y * 35.0) * 0.02
+
+            drop_z = -base_drop + wave + noise
+
+            # 3. FIX RÁCH GÓC: Đặt đỉnh CHÍNH XÁC tại vị trí viền đất, tuyệt đối không chèn vector offset ở đây
+            v_top = gbm.verts.new(curr_pos)
+            v_bot = gbm.verts.new(curr_pos + Vector((0, 0, drop_z)))
+
+            if prev_top_v:
+                try:
+                    face = gbm.faces.new((prev_top_v, v_top, v_bot, prev_bot_v))
+                    face.normal_update()
+                    # 4. FIX MẶT NGƯỢC: So sánh với mặt chuẩn, nếu hướng ngược nhau thì lật lại ngay lập tức
+                    if face.normal.dot(side_normal) < 0:
+                        face.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_bot_v = v_bot
+
+    # Dọn dẹp: Hàn góc và làm đồng bộ hướng lưới
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    # Thiết lập Modifier
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = 0.08
+    # 5. FIX Z-FIGHTING: Dùng Offset 0.8 thay vì 1.0.
+    # Cỏ sẽ lồi ra ngoài 90% và ăn ngập vào khối đất 10%, hoàn toàn triệt tiêu Z-fighting mà không cần offset thủ công.
+    sol_mod.offset = 0.8
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+
+    bev_mod = grass_obj.modifiers.new(name="Round_Edges", type='BEVEL')
+    bev_mod.width = 0.02
+    bev_mod.segments = 3
+    bev_mod.limit_method = 'ANGLE'
+    bev_mod.angle_limit = math.radians(30)
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
+    self.report({'INFO'}, "Đã tạo dải cỏ chuẩn với kết nối góc hoàn hảo.")
+
+
+
+# Thêm 3 tham số mới vào hàm: grass_length, wave_amplitude, wave_frequency
+def generate_grass_overhang_v3(self, context, soil_obj, grass_length=0.3, wave_amplitude=0.15, wave_frequency=5.0):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    gbm = bmesh.new()
+
+    # Sử dụng 1 seed cố định (hoặc truyền từ UI) để dáng cỏ đồng nhất nếu không thay đổi tham số
+    global_seed = 42.0
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0].co, edge.verts[1].co
+        edge_len = (v2 - v1).length
+
+        # Tăng mật độ lưới một chút để sóng mượt hơn khi tần số cao
+        num_segs = max(2, int(edge_len / 0.05))
+
+        side_face = next(f for f in edge.link_faces if abs(f.normal.z) < 0.2)
+        side_normal = side_face.normal.copy()
+
+        prev_top_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.lerp(v2, t)
+
+            # Tính toán sóng dựa trên tham số truyền vào
+            wave_x = math.sin(curr_pos.x * wave_frequency + global_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + global_seed)
+            # Biến điệu biên độ
+            wave = (wave_x + wave_y) * wave_amplitude * 0.5
+
+            # Cắt giảm noise ngẫu nhiên xuống mức tối thiểu để giữ các đường cong mềm mại, tròn trịa
+            noise = math.sin(curr_pos.x * 45.0 + curr_pos.y * 35.0) * (wave_amplitude * 0.1)
+
+            # Độ rủ = chiều dài cơ sở + sóng + nhiễu nhẹ
+            drop_z = -grass_length + wave + noise
+
+            v_top = gbm.verts.new(curr_pos)
+            v_bot = gbm.verts.new(curr_pos + Vector((0, 0, drop_z)))
+
+            if prev_top_v:
+                try:
+                    face = gbm.faces.new((prev_top_v, v_top, v_bot, prev_bot_v))
+                    face.normal_update()
+                    if face.normal.dot(side_normal) < 0:
+                        face.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = 0.08
+    sol_mod.offset = 0.8
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+
+    bev_mod = grass_obj.modifiers.new(name="Round_Edges", type='BEVEL')
+    bev_mod.width = 0.02
+    bev_mod.segments = 3
+    bev_mod.limit_method = 'ANGLE'
+    bev_mod.angle_limit = math.radians(30)
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
+def generate_grass_overhang_v4(self, context, soil_obj, min_length=0.1, max_length=0.4, wave_frequency=5.0, random_seed=42.0):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    gbm = bmesh.new()
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0].co, edge.verts[1].co
+        edge_len = (v2 - v1).length
+
+        # Tăng mật độ lưới một chút để sóng mượt hơn khi tần số cao
+        num_segs = max(2, int(edge_len / 0.05))
+
+        side_face = next(f for f in edge.link_faces if abs(f.normal.z) < 0.2)
+        side_normal = side_face.normal.copy()
+
+        prev_top_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.lerp(v2, t)
+
+            # 1. Tính toán sóng sử dụng random_seed từ tham số
+            wave_x = math.sin(curr_pos.x * wave_frequency + random_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + random_seed)
+
+            # 2. CHUYỂN HÓA SÓNG: sin + cos dao động từ -1.414 đến 1.414.
+            # Đưa chúng về thang đo từ 0.0 đến 1.0
+            raw_wave = (wave_x + wave_y) / 2.828 + 0.5
+
+            # 3. SMOOTHSTEP: Phương trình ép tròn các đỉnh nhọn, làm đáy cỏ mập mạp và mềm mại
+            smooth_wave = raw_wave * raw_wave * (3.0 - 2.0 * raw_wave)
+
+            # 4. KẾT HỢP MIN/MAX: Độ rủ sẽ dao động mượt mà giữa giới hạn tối thiểu và tối đa
+            drop_z = -(min_length + smooth_wave * (max_length - min_length))
+
+            # Giữ lại một chút noise (1cm) để tạo sự tự nhiên nhẹ nhàng
+            noise_val = math.sin(curr_pos.x * 45.0 + curr_pos.y * 35.0) * 0.01
+            drop_z += noise_val
+
+            v_top = gbm.verts.new(curr_pos)
+            v_bot = gbm.verts.new(curr_pos + Vector((0, 0, drop_z)))
+
+            if prev_top_v:
+                try:
+                    face = gbm.faces.new((prev_top_v, v_top, v_bot, prev_bot_v))
+                    face.normal_update()
+                    if face.normal.dot(side_normal) < 0:
+                        face.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = 0.08
+    sol_mod.offset = 0.8
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+
+    bev_mod = grass_obj.modifiers.new(name="Round_Edges", type='BEVEL')
+    bev_mod.width = 0.02
+    bev_mod.segments = 3
+    bev_mod.limit_method = 'ANGLE'
+    bev_mod.angle_limit = math.radians(30)
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
+
+def generate_grass_overhang_v5(
+        self, #
+        context, #
+        soil_obj, #
+        min_length=0.1, #
+        max_length=0.4, #
+        wave_frequency=5.0, #
+        grass_thickness=0.08, #
+        random_seed=42.0, #
+        segment_length=0.1, #
+        bevel_width=0.02 #
+):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    gbm = bmesh.new()
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0].co, edge.verts[1].co
+        edge_len = (v2 - v1).length
+
+        # Khoảng cách 0.05m (5cm) là đủ mượt khi ta đã loại bỏ nhiễu gắt
+        num_segs = max(2, int(edge_len / 0.05))
+
+        side_face = next(f for f in edge.link_faces if abs(f.normal.z) < 0.2)
+        side_normal = side_face.normal.copy()
+
+        prev_top_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.lerp(v2, t)
+
+            # 1. TÍNH TOÁN SÓNG CHÍNH
+            wave_x = math.sin(curr_pos.x * wave_frequency + random_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + random_seed)
+            raw_wave = (wave_x + wave_y) / 2.828 + 0.5
+
+            # 2. BỔ SUNG NHIỄU HỮU CƠ TẦN SỐ THẤP (Smooth Organic Variance)
+            # Dùng một sóng phụ có tần số nhỏ hơn sóng chính (nhân với 0.4) để bóp méo nhẹ biên độ.
+            # Điều này giúp các nhịp sóng to nhỏ khác nhau mà tuyệt đối không sinh ra răng cưa.
+            organic_variance = math.sin(curr_pos.x * (wave_frequency * 0.4) + random_seed * 1.5)
+            raw_wave += organic_variance * 0.15
+
+            # Đảm bảo raw_wave luôn nằm trong khoảng [0.0, 1.0] để hàm Smoothstep không bị lật ngược gây gãy lưới
+            raw_wave = max(0.0, min(1.0, raw_wave))
+
+            # 3. SMOOTHSTEP: Ép tròn các đỉnh/đáy để tạo độ phồng, mập mạp
+            smooth_wave = raw_wave * raw_wave * (3.0 - 2.0 * raw_wave)
+
+            # 4. ÁP DỤNG MIN/MAX:
+            drop_z = -(min_length + smooth_wave * (max_length - min_length))
+
+            v_top = gbm.verts.new(curr_pos)
+            v_bot = gbm.verts.new(curr_pos + Vector((0, 0, drop_z)))
+
+            if prev_top_v:
+                try:
+                    face = gbm.faces.new((prev_top_v, v_top, v_bot, prev_bot_v))
+                    face.normal_update()
+                    if face.normal.dot(side_normal) < 0:
+                        face.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = grass_thickness
+    sol_mod.offset = 0.8
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+
+    bev_mod = grass_obj.modifiers.new(name="Round_Edges", type='BEVEL')
+    bev_mod.width = 0.02
+    bev_mod.segments = 3
+    bev_mod.limit_method = 'ANGLE'
+    bev_mod.angle_limit = math.radians(30)
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
+def generate_grass_overhang(
+        self,
+        context,
+        soil_obj,
+        min_length=0.1,
+        max_length=0.4,
+        wave_frequency=5.0,
+        grass_thickness=0.08,
+        random_seed=42.0,
+        segment_length=0.1,
+        bevel_width=0.02
+):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    gbm = bmesh.new()
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0].co, edge.verts[1].co
+        edge_len = (v2 - v1).length
+
+        # [ĐÃ SỬA] Sử dụng tham số segment_length để tính số lượng phân đoạn lưới
+        num_segs = max(2, int(edge_len / segment_length))
+
+        side_face = next(f for f in edge.link_faces if abs(f.normal.z) < 0.2)
+        side_normal = side_face.normal.copy()
+
+        prev_top_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.lerp(v2, t)
+
+            # 1. TÍNH TOÁN SÓNG CHÍNH
+            wave_x = math.sin(curr_pos.x * wave_frequency + random_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + random_seed)
+            raw_wave = (wave_x + wave_y) / 2.828 + 0.5
+
+            # 2. BỔ SUNG NHIỄU HỮU CƠ TẦN SỐ THẤP (Smooth Organic Variance)
+            organic_variance = math.sin(curr_pos.x * (wave_frequency * 0.4) + random_seed * 1.5)
+            raw_wave += organic_variance * 0.15
+
+            # Đảm bảo raw_wave luôn nằm trong khoảng [0.0, 1.0]
+            raw_wave = max(0.0, min(1.0, raw_wave))
+
+            # 3. SMOOTHSTEP: Ép tròn các đỉnh/đáy để tạo độ phồng, mập mạp
+            smooth_wave = raw_wave * raw_wave * (3.0 - 2.0 * raw_wave)
+
+            # 4. ÁP DỤNG MIN/MAX:
+            drop_z = -(min_length + smooth_wave * (max_length - min_length))
+
+            v_top = gbm.verts.new(curr_pos)
+            v_bot = gbm.verts.new(curr_pos + Vector((0, 0, drop_z)))
+
+            if prev_top_v:
+                try:
+                    face = gbm.faces.new((prev_top_v, v_top, v_bot, prev_bot_v))
+                    face.normal_update()
+                    if face.normal.dot(side_normal) < 0:
+                        face.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = grass_thickness
+    sol_mod.offset = 0.8
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+
+    bev_mod = grass_obj.modifiers.new(name="Round_Edges", type='BEVEL')
+    # [ĐÃ SỬA] Sử dụng tham số bevel_width
+    bev_mod.width = bevel_width
+    bev_mod.segments = 3
+    bev_mod.limit_method = 'ANGLE'
+    bev_mod.angle_limit = math.radians(30)
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
+
+
+def generate_grass_overhang_upgrade(
+        self,
+        context,
+        soil_obj,
+        min_length=0.1,
+        max_length=0.4,
+        wave_frequency=5.0,
+        grass_thickness=0.08,
+        random_seed=42.0,
+        segment_length=0.1,
+        bevel_width=0.02
+):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    gbm = bmesh.new()
+
+    # [BỔ SUNG 1]: Khởi tạo layer để đánh dấu các đỉnh nằm ở mép trên cùng (Top Loop)
+    tag_layer = gbm.verts.layers.int.get("top_tag") or gbm.verts.layers.int.new("top_tag")
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0].co, edge.verts[1].co
+        edge_len = (v2 - v1).length
+
+        num_segs = max(2, int(edge_len / segment_length))
+
+        side_face = next(f for f in edge.link_faces if abs(f.normal.z) < 0.2)
+        side_normal = side_face.normal.copy()
+
+        prev_top_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.lerp(v2, t)
+
+            # 1. TÍNH TOÁN SÓNG CHÍNH
+            wave_x = math.sin(curr_pos.x * wave_frequency + random_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + random_seed)
+            raw_wave = (wave_x + wave_y) / 2.828 + 0.5
+
+            # 2. BỔ SUNG NHIỄU HỮU CƠ TẦN SỐ THẤP
+            organic_variance = math.sin(curr_pos.x * (wave_frequency * 0.4) + random_seed * 1.5)
+            raw_wave += organic_variance * 0.15
+
+            # Đảm bảo raw_wave luôn nằm trong khoảng [0.0, 1.0]
+            raw_wave = max(0.0, min(1.0, raw_wave))
+
+            # 3. SMOOTHSTEP: Ép tròn các đỉnh/đáy
+            smooth_wave = raw_wave * raw_wave * (3.0 - 2.0 * raw_wave)
+
+            # 4. ÁP DỤNG MIN/MAX:
+            drop_z = -(min_length + smooth_wave * (max_length - min_length))
+
+            v_top = gbm.verts.new(curr_pos)
+            v_bot = gbm.verts.new(curr_pos + Vector((0, 0, drop_z)))
+
+            # [BỔ SUNG 2]: Đánh dấu đỉnh
+            v_top[tag_layer] = 1
+            v_bot[tag_layer] = 0
+
+            if prev_top_v:
+                try:
+                    face = gbm.faces.new((prev_top_v, v_top, v_bot, prev_bot_v))
+                    face.normal_update()
+                    if face.normal.dot(side_normal) < 0:
+                        face.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    # ==============================================================
+    # [BỔ SUNG 3]: THUẬT TOÁN ĐÙN VÀ VÁT GÓC VÀNH CỎ BÊN TRONG (LIP)
+    # Tự động chừa lại không gian rỗng ở giữa.
+    # ==============================================================
+    lip_width = 0.25  # Chiều rộng của vành cỏ đùn vào trong (25cm)
+
+    top_edges = [e for e in gbm.edges if e.is_boundary and e.verts[0][tag_layer] == 1 and e.verts[1][tag_layer] == 1]
+    top_edges_set = set(top_edges)
+
+    if top_edges:
+        extruded = bmesh.ops.extrude_edge_only(gbm, edges=top_edges)
+        new_verts = [ele for ele in extruded['geom'] if isinstance(ele, bmesh.types.BMVert)]
+
+        # Di chuyển các đỉnh vừa đùn thụt vào trong đất với toán học vát góc (Miter)
+        for nv in new_verts:
+            ov = None
+            for e in nv.link_edges:
+                ov_candidate = e.other_vert(nv)
+                # Đỉnh chưa đùn giữ nguyên tag_layer là 1, đỉnh mới là 0
+                if ov_candidate[tag_layer] == 1:
+                    ov = ov_candidate
+                    break
+
+            if ov:
+                # Tìm vector hướng vào trong khối đất
+                out_vec = Vector((ov.normal.x, ov.normal.y, 0))
+                if out_vec.length < 0.0001:
+                    out_vec = Vector((1, 0, 0))
+                inward_dir = -out_vec.normalized()
+
+                # Tính toán khoảng cách trượt để góc bo luôn song song (Miter length)
+                miter_length = lip_width
+                conn_edges = [e for e in ov.link_edges if e in top_edges_set]
+                if conn_edges:
+                    e1 = conn_edges[0]
+                    vec1 = (e1.other_vert(ov).co - ov.co)
+                    vec1.z = 0
+                    if vec1.length > 0.0001:
+                        vec1.normalize()
+                        n1 = vec1.cross(Vector((0, 0, 1))).normalized()
+                        if n1.dot(inward_dir) < 0:
+                            n1 = -n1
+
+                        dot_val = inward_dir.dot(n1)
+                        if dot_val > 0.1: # Chống trượt quá mức ở góc nhọn
+                            miter_length = lip_width / dot_val
+
+                miter_length = min(miter_length, lip_width * 3.0)
+
+                # Cập nhật tọa độ
+                nv.co = ov.co + (inward_dir * miter_length)
+                nv.co.z = ov.co.z # Giữ phẳng tuyệt đối
+
+        # Cập nhật Normal cho dải viền mới để Solidify đẩy đúng hướng (lên trên)
+        bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+    # ==============================================================
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = grass_thickness
+    sol_mod.offset = 0.8
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+
+    bev_mod = grass_obj.modifiers.new(name="Round_Edges", type='BEVEL')
+    bev_mod.width = bevel_width
+    bev_mod.segments = 3
+    bev_mod.limit_method = 'ANGLE'
+    bev_mod.angle_limit = math.radians(30)
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))

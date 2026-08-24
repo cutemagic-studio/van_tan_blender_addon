@@ -1464,6 +1464,11 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         if selected:
             logic_upgrade.deform_stylized_canopy(self, context, selected)
         return
+    elif alignMethod == 'DEFORM_CANOPY_2':
+        selected = context.selected_objects
+        if selected:
+            logic_upgrade.deform_stylized_canopy_2(self, context, selected)
+        return
 
     elif alignMethod == 'ATTACH_LEAVES':
         active_obj = context.active_object
@@ -1603,6 +1608,24 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         tiles = [obj for obj in context.selected_objects if obj != active_obj]
         if active_obj and tiles:
             logic_upgrade.generate_stylized_roof(self, context, active_obj, tiles)
+        return
+
+    elif alignMethod == 'FILL_GRASS_OVERHANG':
+        active_obj = context.active_object
+        if active_obj and active_obj.type == 'MESH':
+
+            safe_max = max(config.grass_min_length, config.grass_max_length)
+
+            logic_upgrade.generate_grass_overhang(
+            # logic_upgrade.generate_grass_overhang_upgrade(
+                self, context, active_obj,
+                config.grass_min_length, safe_max,
+                config.wave_frequency,
+                config.grass_thickness,
+                config.random_seed,
+                config.segment_length,
+                config.bevel_width,
+        )
         return
 
 

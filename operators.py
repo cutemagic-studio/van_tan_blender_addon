@@ -624,7 +624,8 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
                 self.report({'WARNING'}, "⚠️ Xảy ra lỗi!")
 
         elif self.action == 'FUNCTION.OBJECT.EXPORT_ALL_OBJECT_TO_FBX':
-            success = object_tools.export_all_object_to_fbx(context)
+            # success = object_tools.export_all_object_to_fbx(context)
+            success = object_tools.export_all_object_to_fbx_upgrade(context)
             if success:
                 self.report({'INFO'}, "✅ Xuất Dữ Liệu FBX Thành Công!")
             else:
