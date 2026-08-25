@@ -85,7 +85,7 @@ def generate_stylized_pavement(
         random_seed=0
 ):
     # Cố định tính ngẫu nhiên
-    random.seed(random_seed)
+    random.seed()
 
     mesh = bpy.data.meshes.new("Stylized_Pavement")
     obj = bpy.data.objects.new("Pavement_Courtyard", mesh)
@@ -193,7 +193,7 @@ def generate_stylized_pavement_theo_hinh_dang_yeu_cau(
         random_seed=0
 ):
     # Cố định tính ngẫu nhiên
-    random.seed(random_seed)
+    random.seed()
 
     if not target_obj or target_obj.type != 'MESH':
         self.report({'WARNING'}, "Cần chọn một mặt phẳng (Mesh) làm khuôn.")
@@ -418,7 +418,7 @@ def generate_chunky_stylized_rock(
         elongation=0.3,        # Kéo giãn đá
         random_seed=0
 ):
-    random.seed(random_seed)
+    random.seed()
 
     mesh = bpy.data.meshes.new(f"Rock_Faceted_{random_seed}")
     obj = bpy.data.objects.new(f"Rock_Faceted_{random_seed}", mesh)
@@ -473,5 +473,870 @@ def generate_chunky_stylized_rock(
     # Bật Flat Shading để tôn vinh các mảng miếng
     for p in mesh.polygons:
         p.use_smooth = False
+
+    return obj
+
+
+
+def generate_procedural_stone_wall(
+        self,
+        context,
+        target_curve,          # Đối tượng Curve làm đường dẫn
+        num_layers=3,          # Số lớp đá ngang (như hình của bạn là 3)
+        layer_height=0.4,      # Chiều cao mỗi lớp
+        wall_thickness=0.3,    # Bề dày của bức tường
+        min_width=0.4,         # Chiều dài NGẮN NHẤT của 1 viên đá
+        max_width=1.0,         # Chiều dài DÀI NHẤT của 1 viên đá
+        gap_size=0.03,         # Khe hở vữa giữa các viên
+        random_seed=0
+):
+    if not target_curve or target_curve.type != 'CURVE':
+        self.report({'WARNING'}, "Vui lòng chọn một đường Curve làm khuôn dẫn!")
+        return None
+
+    random.seed()
+
+    # 1. TÍNH CHIỀU DÀI TỔNG THỂ CỦA ĐƯỜNG CURVE
+    try:
+        total_length = sum(s.calc_length() for s in target_curve.data.splines)
+    except AttributeError:
+        # Fallback cho các bản Blender rất cũ
+        total_length = 10.0
+
+        # 2. THUẬT TOÁN TÍNH TOÁN VỊ TRÍ CẮT SO LE NGẪU NHIÊN
+    layer_cuts = []
+    min_stagger = min_width * 0.35 # Mạch cắt phải lệch nhau ít nhất 35% so với viên nhỏ nhất
+
+    for i in range(num_layers):
+        cuts = []
+        current_x = 0.0
+
+        while current_x < total_length:
+            # Random chiều dài viên đá
+            stone_len = random.uniform(min_width, max_width)
+            proposed_cut = current_x + stone_len
+
+            if proposed_cut >= total_length:
+                proposed_cut = total_length
+
+            # Ép So Le: Kiểm tra với lớp ngay bên dưới (i-1)
+            if i > 0 and proposed_cut < total_length:
+                prev_cuts = layer_cuts[i-1]
+                # Tìm mạch cắt gần nhất ở lớp dưới
+                closest_cut = min(prev_cuts, key=lambda x: abs(x - proposed_cut))
+                distance = abs(closest_cut - proposed_cut)
+
+                # Nếu mạch cắt trùng nhau hoặc quá gần -> Ép viên đá dài thêm ra để lệch đi
+                if distance < min_stagger:
+                    proposed_cut = closest_cut + min_stagger
+                    if proposed_cut >= total_length:
+                        proposed_cut = total_length
+
+            cuts.append(proposed_cut)
+            current_x = proposed_cut
+
+        layer_cuts.append(cuts)
+
+    # 3. DỰNG LƯỚI BỨC TƯỜNG (Dựng thẳng tắp dọc theo trục X)
+    mesh = bpy.data.meshes.new(target_curve.name + "_Wall")
+    obj = bpy.data.objects.new(target_curve.name + "_Wall", mesh)
+    context.collection.objects.link(obj)
+
+    # Khớp toạ độ khối đá vào toạ độ của đường Curve
+    obj.matrix_world = target_curve.matrix_world.copy()
+
+    bm = bmesh.new()
+
+    for i, cuts in enumerate(layer_cuts):
+        z_start = i * layer_height
+        z_end = (i + 1) * layer_height
+        start_x = 0.0
+
+        for end_x in cuts:
+            # Tạo 8 đỉnh cho mỗi viên đá (Có trừ hao Gap Size)
+            x0 = start_x + (gap_size / 2)
+            x1 = end_x - (gap_size / 2)
+            y0 = -(wall_thickness / 2) + (gap_size / 2)
+            y1 = (wall_thickness / 2) - (gap_size / 2)
+            z0 = z_start + (gap_size / 2)
+            z1 = z_end - (gap_size / 2)
+
+            # Bỏ qua nếu viên đá quá nhỏ do lỗi nén mảng
+            if x1 <= x0:
+                start_x = end_x
+                continue
+
+            verts = [
+                bm.verts.new((x0, y0, z0)), bm.verts.new((x1, y0, z0)),
+                bm.verts.new((x1, y1, z0)), bm.verts.new((x0, y1, z0)),
+                bm.verts.new((x0, y0, z1)), bm.verts.new((x1, y0, z1)),
+                bm.verts.new((x1, y1, z1)), bm.verts.new((x0, y1, z1))
+            ]
+
+            bm.faces.new((verts[0], verts[3], verts[2], verts[1])) # Đáy
+            bm.faces.new((verts[4], verts[5], verts[6], verts[7])) # Đỉnh
+            bm.faces.new((verts[0], verts[1], verts[5], verts[4])) # Mặt trước
+            bm.faces.new((verts[2], verts[3], verts[7], verts[6])) # Mặt sau
+            bm.faces.new((verts[1], verts[2], verts[6], verts[5])) # Cạnh phải
+            bm.faces.new((verts[3], verts[0], verts[4], verts[7])) # Cạnh trái
+
+            start_x = end_x
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    # 4. GẮN MODIFIERS ĐỂ UỐN CONG VÀ LÀM ĐẸP
+    # Cắt lưới dọc (Simple Subsurf) để đá đủ mềm dẻo khi bẻ cong ở góc chữ L
+    subsurf = obj.modifiers.new(name="Bending_Resolution", type='SUBSURF')
+    subsurf.subdivision_type = 'SIMPLE'
+    subsurf.levels = 3
+
+    # Uốn cong tường theo đường dẫn Curve của bạn
+    curve_mod = obj.modifiers.new(name="Bend_Along_Path", type='CURVE')
+    curve_mod.object = target_curve
+    curve_mod.deform_axis = 'POS_X'
+
+    # Bo góc Stylized
+    bevel = obj.modifiers.new(name="Stylized_Bevel", type='BEVEL')
+    bevel.width = 0.04
+    bevel.segments = 2
+    bevel.use_clamp_overlap = True
+
+    return obj
+
+
+def generate_procedural_stone_wall_v2(
+        self,
+        context,
+        target_curve,          # Đối tượng Curve làm đường dẫn
+        num_layers=3,          # Số lớp đá ngang (như hình của bạn là 3)
+        layer_height=0.4,      # Chiều cao mỗi lớp
+        wall_thickness=0.3,    # Bề dày của bức tường
+        min_width=0.4,         # Chiều dài NGẮN NHẤT của 1 viên đá
+        max_width=1.0,         # Chiều dài DÀI NHẤT của 1 viên đá
+        gap_size=0.03,         # Khe hở vữa giữa các viên
+        alignment='CENTER',    # [MỚI] Căn lề: 'CENTER' (Giữa), 'LEFT' (Trái), 'RIGHT' (Phải)
+        random_seed=0
+):
+    if not target_curve or target_curve.type != 'CURVE':
+        self.report({'WARNING'}, "Vui lòng chọn một đường Curve làm khuôn dẫn!")
+        return None
+
+    random.seed()
+
+    # 1. TÍNH CHIỀU DÀI TỔNG THỂ CỦA ĐƯỜNG CURVE
+    try:
+        total_length = sum(s.calc_length() for s in target_curve.data.splines)
+    except AttributeError:
+        # Fallback cho các bản Blender rất cũ
+        total_length = 10.0
+
+    # 2. THUẬT TOÁN TÍNH TOÁN VỊ TRÍ CẮT SO LE NGẪU NHIÊN
+    layer_cuts = []
+    min_stagger = min_width * 0.35 # Mạch cắt phải lệch nhau ít nhất 35% so với viên nhỏ nhất
+
+    for i in range(num_layers):
+        cuts = []
+        current_x = 0.0
+
+        while current_x < total_length:
+            # Random chiều dài viên đá
+            stone_len = random.uniform(min_width, max_width)
+            proposed_cut = current_x + stone_len
+
+            if proposed_cut >= total_length:
+                proposed_cut = total_length
+
+            # Ép So Le: Kiểm tra với lớp ngay bên dưới (i-1)
+            if i > 0 and proposed_cut < total_length:
+                prev_cuts = layer_cuts[i-1]
+                # Tìm mạch cắt gần nhất ở lớp dưới
+                closest_cut = min(prev_cuts, key=lambda x: abs(x - proposed_cut))
+                distance = abs(closest_cut - proposed_cut)
+
+                # Nếu mạch cắt trùng nhau hoặc quá gần -> Ép viên đá dài thêm ra để lệch đi
+                if distance < min_stagger:
+                    proposed_cut = closest_cut + min_stagger
+                    if proposed_cut >= total_length:
+                        proposed_cut = total_length
+
+            cuts.append(proposed_cut)
+            current_x = proposed_cut
+
+        layer_cuts.append(cuts)
+
+    # 3. DỰNG LƯỚI BỨC TƯỜNG (Dựng thẳng tắp dọc theo trục X)
+    mesh = bpy.data.meshes.new(target_curve.name + "_Wall")
+    obj = bpy.data.objects.new(target_curve.name + "_Wall", mesh)
+    context.collection.objects.link(obj)
+
+    # Khớp toạ độ khối đá vào toạ độ của đường Curve
+    obj.matrix_world = target_curve.matrix_world.copy()
+
+    bm = bmesh.new()
+
+    for i, cuts in enumerate(layer_cuts):
+        z_start = i * layer_height
+        z_end = (i + 1) * layer_height
+        start_x = 0.0
+
+        for end_x in cuts:
+            # Tạo 8 đỉnh cho mỗi viên đá (Có trừ hao Gap Size)
+            x0 = start_x + (gap_size / 2)
+            x1 = end_x - (gap_size / 2)
+
+            # [THAY ĐỔI NHỎ TẠI ĐÂY] Tính trục Y dựa trên alignment thay vì luôn ở giữa
+            if alignment == 'LEFT':
+                y0 = 0.0 + (gap_size / 2)
+                y1 = wall_thickness - (gap_size / 2)
+            elif alignment == 'RIGHT':
+                y0 = -wall_thickness + (gap_size / 2)
+                y1 = 0.0 - (gap_size / 2)
+            else: # Mặc định là CENTER - Trùng khớp 100% với code gốc của bạn
+                y0 = -(wall_thickness / 2) + (gap_size / 2)
+                y1 = (wall_thickness / 2) - (gap_size / 2)
+
+            z0 = z_start + (gap_size / 2)
+            z1 = z_end - (gap_size / 2)
+
+            # Bỏ qua nếu viên đá quá nhỏ do lỗi nén mảng
+            if x1 <= x0:
+                start_x = end_x
+                continue
+
+            verts = [
+                bm.verts.new((x0, y0, z0)), bm.verts.new((x1, y0, z0)),
+                bm.verts.new((x1, y1, z0)), bm.verts.new((x0, y1, z0)),
+                bm.verts.new((x0, y0, z1)), bm.verts.new((x1, y0, z1)),
+                bm.verts.new((x1, y1, z1)), bm.verts.new((x0, y1, z1))
+            ]
+
+            bm.faces.new((verts[0], verts[3], verts[2], verts[1])) # Đáy
+            bm.faces.new((verts[4], verts[5], verts[6], verts[7])) # Đỉnh
+            bm.faces.new((verts[0], verts[1], verts[5], verts[4])) # Mặt trước
+            bm.faces.new((verts[2], verts[3], verts[7], verts[6])) # Mặt sau
+            bm.faces.new((verts[1], verts[2], verts[6], verts[5])) # Cạnh phải
+            bm.faces.new((verts[3], verts[0], verts[4], verts[7])) # Cạnh trái
+
+            start_x = end_x
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    # 4. GẮN MODIFIERS ĐỂ UỐN CONG VÀ LÀM ĐẸP
+    # Cắt lưới dọc (Simple Subsurf) để đá đủ mềm dẻo khi bẻ cong ở góc chữ L
+    subsurf = obj.modifiers.new(name="Bending_Resolution", type='SUBSURF')
+    subsurf.subdivision_type = 'SIMPLE'
+    subsurf.levels = 3
+
+    # Uốn cong tường theo đường dẫn Curve của bạn
+    curve_mod = obj.modifiers.new(name="Bend_Along_Path", type='CURVE')
+    curve_mod.object = target_curve
+    curve_mod.deform_axis = 'POS_X'
+
+    # Bo góc Stylized
+    bevel = obj.modifiers.new(name="Stylized_Bevel", type='BEVEL')
+    bevel.width = 0.04
+    bevel.segments = 2
+    bevel.use_clamp_overlap = True
+
+    return obj
+
+
+
+def apply_stone_surface_damage(
+        self,
+        context,
+        inset_thickness=0.02,
+        noise_strength=0.04,   # Có thể tăng nhẹ thông số này lên vì sóng nhiễu rất mượt
+        noise_scale=2.5,       # [MỚI] Bước sóng: Càng nhỏ thì sóng lượn càng to (càng mềm mại)
+        random_seed=0
+):
+    random.seed()
+
+    obj = context.edit_object
+    if not obj or obj.type != 'MESH':
+        self.report({'WARNING'}, "Vui lòng chuyển sang Edit Mode và chọn các mặt cần làm móp!")
+        return {'CANCELLED'}
+
+    bm = bmesh.from_edit_mesh(obj.data)
+
+    # 1. LẤY MẶT CHỌN BAN ĐẦU
+    initial_faces = [f for f in bm.faces if f.select]
+    if not initial_faces:
+        self.report({'WARNING'}, "Vui lòng bôi đen (select) các mặt phẳng cần làm gồ ghề!")
+        return {'CANCELLED'}
+
+    # Tính hướng Pháp tuyến trung bình
+    avg_normal = mathutils.Vector((0, 0, 0))
+    for f in initial_faces:
+        avg_normal += f.normal
+    if avg_normal.length > 0:
+        avg_normal.normalize()
+
+    for f in bm.faces:
+        f.select = False
+
+    # 2. INSET BỀ MẶT (Viền an toàn)
+    bmesh.ops.inset_region(
+        bm,
+        faces=initial_faces,
+        thickness=inset_thickness,
+        use_even_offset=True
+    )
+
+    bm.faces.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+
+    # 3. LỌC LẤY CHÍNH XÁC VÙNG LÕI
+    inner_faces = [f for f in initial_faces if f.is_valid]
+    if not inner_faces:
+        return {'FINISHED'}
+
+    # 4. CHỌN ĐỈNH AN TOÀN TRONG LÕI
+    inner_edges = set()
+    for f in inner_faces:
+        for e in f.edges:
+            inner_edges.add(e)
+
+    boundary_verts = set()
+    for e in inner_edges:
+        linked_inner = [f for f in e.link_faces if f in inner_faces]
+        if len(linked_inner) == 1:
+            boundary_verts.add(e.verts[0])
+            boundary_verts.add(e.verts[1])
+
+    all_inner_verts = set()
+    for f in inner_faces:
+        for v in f.verts:
+            all_inner_verts.add(v)
+
+    safe_internal_verts = all_inner_verts - boundary_verts
+
+    # 5. CẮT TAM GIÁC (Triangulate để bề mặt biến dạng mượt hơn)
+    bmesh.ops.triangulate(bm, faces=inner_faces)
+
+    # ========================================================
+    # 6. ĐẬP MÓP BẰNG NHIỄU KHÔNG GIAN (SMOOTH NOISE)
+    # ========================================================
+    # Sinh một offset ngẫu nhiên cho thuật toán Noise để mỗi viên đá móp một kiểu
+    noise_offset = mathutils.Vector((
+        random.uniform(-100, 100),
+        random.uniform(-100, 100),
+        random.uniform(-100, 100)
+    ))
+
+    for v in safe_internal_verts:
+        if v.is_valid:
+            # Tính toán vị trí đỉnh trong không gian 3D
+            # Chuyển đổi toạ độ Local của đỉnh sang toạ độ World (nếu cần thiết để móp đồng bộ toàn tường)
+            world_co = obj.matrix_world @ v.co
+
+            # Tính mẫu nhiễu (Dùng toạ độ thế giới + tỷ lệ phóng to)
+            sample_point = (world_co * noise_scale) + noise_offset
+
+            # mathutils.noise.noise trả về giá trị lượn sóng mềm mại từ -1.0 đến 1.0
+            n_val = mathutils.noise.noise(sample_point)
+
+            # Ép phần lớn giá trị về ÂM để mặt đá chủ yếu bị LÚN vào trong, thỉnh thoảng mới hơi lồi lên
+            # n_val (từ -1 đến 1) -> n_val - 0.5 (từ -1.5 đến 0.5)
+            biased_val = n_val - 0.5
+
+            # Dịch chuyển đỉnh theo hướng Pháp tuyến
+            v.co += avg_normal * (biased_val * noise_strength)
+
+    # Cập nhật Viewport
+    bmesh.update_edit_mesh(obj.data)
+
+    return {'FINISHED'}
+
+def apply_stone_surface_damage_upgrade(
+        self,
+        context,
+        inset_thickness=0.02,
+        noise_strength=0.04,
+        noise_scale=2.5,
+):
+    random.seed()
+
+    obj = context.edit_object
+    if not obj or obj.type != 'MESH':
+        self.report({'WARNING'}, "Vui lòng chuyển sang Edit Mode và chọn các mặt cần làm móp!")
+        return {'CANCELLED'}
+
+    bm = bmesh.from_edit_mesh(obj.data)
+
+    # ========================================================
+    # 1. LẤY MẶT CHỌN VÀ CHIA THÀNH TỪNG CỤM ĐÁ (ISLANDS)
+    # ========================================================
+    selected_faces = set(f for f in bm.faces if f.select)
+    if not selected_faces:
+        self.report({'WARNING'}, "Vui lòng bôi đen (select) các mặt phẳng cần làm gồ ghề!")
+        return {'CANCELLED'}
+
+    islands = [] # Lưu trữ các cụm đá riêng biệt
+
+    # Thuật toán loang (Flood-fill) để tìm các mặt dính liền nhau (1 cụm = 1 viên đá)
+    while selected_faces:
+        start_face = selected_faces.pop()
+        island = {start_face}
+        queue = [start_face]
+
+        while queue:
+            current_face = queue.pop(0)
+            for e in current_face.edges:
+                for linked_face in e.link_faces:
+                    if linked_face in selected_faces:
+                        selected_faces.remove(linked_face)
+                        island.add(linked_face)
+                        queue.append(linked_face)
+
+        islands.append(list(island))
+
+    # Gán Pháp tuyến và Tung đồng xu (Lồi/Lõm) RIÊNG CHO TỪNG VIÊN ĐÁ
+    island_data = {}
+    initial_faces_list = []
+
+    for idx, island_faces in enumerate(islands):
+        initial_faces_list.extend(island_faces)
+
+        avg_normal = mathutils.Vector((0, 0, 0))
+        for f in island_faces:
+            avg_normal += f.normal
+        if avg_normal.length > 0:
+            avg_normal.normalize()
+
+        island_data[idx] = {
+            'normal': avg_normal,
+            'is_convex': random.choice([True, False]), # Mỗi viên tung đồng xu 1 lần!
+            'noise_offset': mathutils.Vector((random.uniform(-100, 100), random.uniform(-100, 100), random.uniform(-100, 100))),
+            'faces': set(island_faces)
+        }
+
+    for f in bm.faces:
+        f.select = False
+
+    # ========================================================
+    # 2. INSET BỀ MẶT TẤT CẢ CÙNG LÚC
+    # ========================================================
+    inset_res = bmesh.ops.inset_region(
+        bm,
+        faces=initial_faces_list,
+        thickness=inset_thickness,
+        use_even_offset=True
+    )
+    # Lưu lại các mặt viền mới sinh ra để lát nữa bôi đen lại
+    rim_faces = inset_res.get('faces', [])
+
+    bm.faces.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+
+    # ========================================================
+    # 3. LỌC LẤY CHÍNH XÁC VÙNG LÕI CHO TỪNG VIÊN
+    # ========================================================
+    inner_faces = [f for f in initial_faces_list if f.is_valid]
+    if not inner_faces:
+        return {'FINISHED'}
+
+    island_safe_verts = {idx: set() for idx in island_data.keys()}
+
+    for idx, data in island_data.items():
+        valid_island_faces = [f for f in data['faces'] if f.is_valid]
+
+        inner_edges = set()
+        for f in valid_island_faces:
+            for e in f.edges:
+                inner_edges.add(e)
+
+        boundary_verts = set()
+        for e in inner_edges:
+            linked_inner = [f for f in e.link_faces if f in valid_island_faces]
+            if len(linked_inner) == 1:
+                boundary_verts.add(e.verts[0])
+                boundary_verts.add(e.verts[1])
+
+        all_inner_verts = set()
+        for f in valid_island_faces:
+            for v in f.verts:
+                all_inner_verts.add(v)
+
+        safe_verts = all_inner_verts - boundary_verts
+        island_safe_verts[idx] = safe_verts
+
+    # ========================================================
+    # 4. CẮT TAM GIÁC VÙNG LÕI
+    # ========================================================
+    tri_res = bmesh.ops.triangulate(bm, faces=inner_faces)
+    # Lưu lại các mặt tam giác lõi mới sinh ra để lát nữa bôi đen lại
+    core_faces = tri_res.get('faces', [])
+
+    # ========================================================
+    # 5. ĐẬP MÓP NGẪU NHIÊN ĐỘC LẬP TỪNG VIÊN
+    # ========================================================
+    for idx, safe_verts in island_safe_verts.items():
+        data = island_data[idx]
+        avg_normal = data['normal']
+        is_convex = data['is_convex']
+        noise_offset = data['noise_offset']
+
+        for v in safe_verts:
+            if v.is_valid:
+                world_co = obj.matrix_world @ v.co
+                sample_point = (world_co * noise_scale) + noise_offset
+
+                n_val = mathutils.noise.noise(sample_point)
+                normalized_noise = (n_val + 1.0) / 2.0
+
+                if is_convex:
+                    biased_val = normalized_noise
+                else:
+                    biased_val = -normalized_noise
+
+                v.co += avg_normal * (biased_val * noise_strength)
+
+    # ========================================================
+    # 6. KHÔI PHỤC VÙNG CHỌN BAN ĐẦU (RESTORE SELECTION)
+    # ========================================================
+    for f in rim_faces:
+        if f.is_valid:
+            f.select = True
+
+    for f in core_faces:
+        if f.is_valid:
+            f.select = True
+
+    # Bắt buộc gọi lệnh này để giao diện Blender bật màu cam cả cho Cạnh (Edge) và Đỉnh (Verts)
+    bm.select_flush(True)
+
+    # Cập nhật Viewport
+    bmesh.update_edit_mesh(obj.data)
+
+    return {'FINISHED'}
+
+def remove_redundant_edges(self, context, angle_limit_degrees=1.0):
+    obj = context.edit_object
+    if not obj or obj.type != 'MESH':
+        if self:
+            self.report({'WARNING'}, "Vui lòng chuyển sang Edit Mode để tối ưu lưới!")
+        return {'CANCELLED'}
+
+    bm = bmesh.from_edit_mesh(obj.data)
+    bm.edges.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+
+    # Xác định vùng quét (chọn một phần hoặc toàn bộ)
+    selected_edges = [e for e in bm.edges if e.select]
+    edges_to_clean = selected_edges if selected_edges else list(bm.edges)
+    verts_to_clean = list(set(v for e in edges_to_clean for v in e.verts))
+
+    if not edges_to_clean:
+        return {'CANCELLED'}
+
+    # ========================================================
+    # BƯỚC 1: DỌN DẸP TRIỆT ĐỂ (Cho phép sinh N-Gon)
+    # ========================================================
+    bmesh.ops.dissolve_limit(
+        bm,
+        angle_limit=math.radians(angle_limit_degrees),
+        use_dissolve_boundaries=False,
+        edges=edges_to_clean,
+        verts=verts_to_clean
+    )
+
+    bm.faces.ensure_lookup_table()
+
+    # ========================================================
+    # BƯỚC 2: TÌM DIỆT N-GON (Đa giác từ 5 cạnh trở lên)
+    # ========================================================
+    # Mặt đỉnh gạch (hình chữ nhật) chỉ có 4 cạnh -> An toàn, bị bỏ qua.
+    # Vành đai chữ C (8 cạnh) -> Bị bắt giữ.
+    ngons = [f for f in bm.faces if len(f.verts) > 4]
+
+    if ngons:
+        # Băm nát cái N-Gon đa giác lõm đó thành các hình tam giác
+        bmesh.ops.triangulate(bm, faces=ngons)
+
+        # ========================================================
+        # BƯỚC 3: TRIS TO QUADS (Gom tam giác lại thành Lưới Vuông)
+        # ========================================================
+        # Dùng chuẩn góc 40 độ giống hệt cấu hình mặc định của Blender
+        bmesh.ops.join_triangles(
+            bm,
+            faces=bm.faces,
+            angle_face_threshold=math.radians(40.0),
+            angle_shape_threshold=math.radians(40.0)
+        )
+
+    bmesh.update_edit_mesh(obj.data)
+
+    if self:
+        self.report({'INFO'}, "Đã tối ưu lưới trực diện (Chỉ giữ lại Quads và Tris)!")
+
+    return {'FINISHED'}
+
+
+def generate_procedural_stone_path(
+        self,
+        context,
+        target_curve,          # Đối tượng Curve làm đường dẫn
+        num_lanes=3,           # Tương đương 'num_layers': Số làn đá ghép ngang lại thành đường
+        lane_width=0.4,        # Tương đương 'layer_height': Bề rộng của mỗi làn đá
+        stone_thickness=0.15,  # Tương đương 'wall_thickness': Độ dày của viên đá (nhô lên khỏi mặt đất)
+        min_length=0.4,        # Chiều dài NGẮN NHẤT của 1 viên đá dọc theo đường
+        max_length=1.0,        # Chiều dài DÀI NHẤT của 1 viên đá dọc theo đường
+        gap_size=0.03          # Khe hở giữa các viên đá (mạch vữa/đất)
+):
+    if not target_curve or target_curve.type != 'CURVE':
+        if self:
+            self.report({'WARNING'}, "Vui lòng chọn một đường Curve làm đường dẫn!")
+        return None
+
+    random.seed()
+
+    # 1. TÍNH CHIỀU DÀI TỔNG THỂ CỦA ĐƯỜNG CURVE
+    try:
+        total_length = sum(s.calc_length() for s in target_curve.data.splines)
+    except AttributeError:
+        total_length = 10.0
+
+    # ========================================================
+    # 2. THUẬT TOÁN TÍNH TOÁN VỊ TRÍ CẮT SO LE NGẪU NHIÊN
+    # ========================================================
+    lane_cuts = []
+    min_stagger = min_length * 0.35
+
+    for i in range(num_lanes):
+        cuts = []
+        current_x = 0.0
+
+        while current_x < total_length:
+            stone_len = random.uniform(min_length, max_length)
+            proposed_cut = current_x + stone_len
+
+            if proposed_cut >= total_length:
+                proposed_cut = total_length
+
+            # Ép So Le: Kiểm tra với làn đá ngay bên cạnh (i-1)
+            if i > 0 and proposed_cut < total_length:
+                prev_cuts = lane_cuts[i-1]
+                closest_cut = min(prev_cuts, key=lambda x: abs(x - proposed_cut))
+                distance = abs(closest_cut - proposed_cut)
+
+                if distance < min_stagger:
+                    proposed_cut = closest_cut + min_stagger
+                    if proposed_cut >= total_length:
+                        proposed_cut = total_length
+
+            cuts.append(proposed_cut)
+            current_x = proposed_cut
+
+        lane_cuts.append(cuts)
+
+    # ========================================================
+    # 3. DỰNG LƯỚI CON ĐƯỜNG (Dàn ngang theo trục Y)
+    # ========================================================
+    mesh = bpy.data.meshes.new(target_curve.name + "_Path")
+    obj = bpy.data.objects.new(target_curve.name + "_Path", mesh)
+    context.collection.objects.link(obj)
+
+    obj.matrix_world = target_curve.matrix_world.copy()
+
+    bm = bmesh.new()
+
+    # Tính toán để tâm con đường nằm chính giữa đường Curve
+    total_path_width = num_lanes * lane_width
+    y_offset = -total_path_width / 2.0
+
+    for i, cuts in enumerate(lane_cuts):
+        # [THAY ĐỔI CHÍNH]: Dàn trải đá theo trục Y (Chiều rộng) thay vì trục Z (Chiều cao)
+        y_start = y_offset + (i * lane_width)
+        y_end = y_offset + ((i + 1) * lane_width)
+        start_x = 0.0
+
+        for end_x in cuts:
+            x0 = start_x + (gap_size / 2)
+            x1 = end_x - (gap_size / 2)
+            y0 = y_start + (gap_size / 2)
+            y1 = y_end - (gap_size / 2)
+
+            # Trục Z bây giờ chỉ đơn giản là độ dày của viên đá (từ 0 lên stone_thickness)
+            z0 = 0.0
+            z1 = stone_thickness
+
+            if x1 <= x0 or y1 <= y0:
+                start_x = end_x
+                continue
+
+            verts = [
+                bm.verts.new((x0, y0, z0)), bm.verts.new((x1, y0, z0)),
+                bm.verts.new((x1, y1, z0)), bm.verts.new((x0, y1, z0)),
+                bm.verts.new((x0, y0, z1)), bm.verts.new((x1, y0, z1)),
+                bm.verts.new((x1, y1, z1)), bm.verts.new((x0, y1, z1))
+            ]
+
+            bm.faces.new((verts[0], verts[3], verts[2], verts[1])) # Đáy
+            bm.faces.new((verts[4], verts[5], verts[6], verts[7])) # Mặt đường (Đỉnh)
+            bm.faces.new((verts[0], verts[1], verts[5], verts[4])) # Mặt trước
+            bm.faces.new((verts[2], verts[3], verts[7], verts[6])) # Mặt sau
+            bm.faces.new((verts[1], verts[2], verts[6], verts[5])) # Cạnh phải
+            bm.faces.new((verts[3], verts[0], verts[4], verts[7])) # Cạnh trái
+
+            start_x = end_x
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    # ========================================================
+    # 4. GẮN MODIFIERS ĐỂ UỐN CONG THEO PATH
+    # ========================================================
+    subsurf = obj.modifiers.new(name="Bending_Resolution", type='SUBSURF')
+    subsurf.subdivision_type = 'SIMPLE'
+    subsurf.levels = 3
+
+    curve_mod = obj.modifiers.new(name="Bend_Along_Path", type='CURVE')
+    curve_mod.object = target_curve
+    curve_mod.deform_axis = 'POS_X'
+
+    bevel = obj.modifiers.new(name="Stylized_Bevel", type='BEVEL')
+    bevel.width = 0.04
+    bevel.segments = 2
+    bevel.use_clamp_overlap = True
+
+    return obj
+
+def generate_procedural_stone_path_v2(
+        self,
+        context,
+        target_curve,          # Đối tượng Curve làm đường dẫn
+        num_lanes=3,           # Tương đương 'num_layers': Số làn đá ghép ngang lại thành đường
+        lane_width=0.4,        # Tương đương 'layer_height': Bề rộng của mỗi làn đá
+        stone_thickness=0.15,  # Tương đương 'wall_thickness': Độ dày của viên đá (nhô lên khỏi mặt đất)
+        min_length=0.4,        # Chiều dài NGẮN NHẤT của 1 viên đá dọc theo đường
+        max_length=1.0,        # Chiều dài DÀI NHẤT của 1 viên đá dọc theo đường
+        gap_size=0.03,         # Khe hở giữa các viên đá (mạch vữa/đất)
+        alignment='CENTER'     # [MỚI] Căn lề: 'CENTER' (Giữa), 'LEFT' (Trái), 'RIGHT' (Phải)
+):
+    if not target_curve or target_curve.type != 'CURVE':
+        if self:
+            self.report({'WARNING'}, "Vui lòng chọn một đường Curve làm đường dẫn!")
+        return None
+
+    random.seed()
+
+    # 1. TÍNH CHIỀU DÀI TỔNG THỂ CỦA ĐƯỜNG CURVE
+    try:
+        total_length = sum(s.calc_length() for s in target_curve.data.splines)
+    except AttributeError:
+        total_length = 10.0
+
+    # ========================================================
+    # 2. THUẬT TOÁN TÍNH TOÁN VỊ TRÍ CẮT SO LE NGẪU NHIÊN
+    # ========================================================
+    lane_cuts = []
+    min_stagger = min_length * 0.35
+
+    for i in range(num_lanes):
+        cuts = []
+        current_x = 0.0
+
+        while current_x < total_length:
+            stone_len = random.uniform(min_length, max_length)
+            proposed_cut = current_x + stone_len
+
+            if proposed_cut >= total_length:
+                proposed_cut = total_length
+
+            # Ép So Le: Kiểm tra với làn đá ngay bên cạnh (i-1)
+            if i > 0 and proposed_cut < total_length:
+                prev_cuts = lane_cuts[i-1]
+                closest_cut = min(prev_cuts, key=lambda x: abs(x - proposed_cut))
+                distance = abs(closest_cut - proposed_cut)
+
+                if distance < min_stagger:
+                    proposed_cut = closest_cut + min_stagger
+                    if proposed_cut >= total_length:
+                        proposed_cut = total_length
+
+            cuts.append(proposed_cut)
+            current_x = proposed_cut
+
+        lane_cuts.append(cuts)
+
+    # ========================================================
+    # 3. DỰNG LƯỚI CON ĐƯỜNG (Dàn ngang theo trục Y)
+    # ========================================================
+    mesh = bpy.data.meshes.new(target_curve.name + "_Path")
+    obj = bpy.data.objects.new(target_curve.name + "_Path", mesh)
+    context.collection.objects.link(obj)
+
+    obj.matrix_world = target_curve.matrix_world.copy()
+
+    bm = bmesh.new()
+
+    # Tính toán tổng bề rộng của đường
+    total_path_width = num_lanes * lane_width
+
+    # [THAY ĐỔI NHỎ TẠI ĐÂY] Tính điểm bắt đầu của con đường dựa trên căn lề
+    if alignment == 'LEFT':
+        y_offset = 0.0                     # Đường sẽ lấn toàn bộ sang bên trái
+    elif alignment == 'RIGHT':
+        y_offset = -total_path_width       # Đường sẽ lấn toàn bộ sang bên phải
+    else: # Mặc định là 'CENTER'
+        y_offset = -total_path_width / 2.0 # Đường nằm ngay chính giữa trục Curve
+
+    for i, cuts in enumerate(lane_cuts):
+        # Dàn trải đá theo trục Y (Chiều rộng) thay vì trục Z (Chiều cao)
+        y_start = y_offset + (i * lane_width)
+        y_end = y_offset + ((i + 1) * lane_width)
+        start_x = 0.0
+
+        for end_x in cuts:
+            x0 = start_x + (gap_size / 2)
+            x1 = end_x - (gap_size / 2)
+            y0 = y_start + (gap_size / 2)
+            y1 = y_end - (gap_size / 2)
+
+            # Trục Z bây giờ chỉ đơn giản là độ dày của viên đá (từ 0 lên stone_thickness)
+            z0 = 0.0
+            z1 = stone_thickness
+
+            if x1 <= x0 or y1 <= y0:
+                start_x = end_x
+                continue
+
+            verts = [
+                bm.verts.new((x0, y0, z0)), bm.verts.new((x1, y0, z0)),
+                bm.verts.new((x1, y1, z0)), bm.verts.new((x0, y1, z0)),
+                bm.verts.new((x0, y0, z1)), bm.verts.new((x1, y0, z1)),
+                bm.verts.new((x1, y1, z1)), bm.verts.new((x0, y1, z1))
+            ]
+
+            bm.faces.new((verts[0], verts[3], verts[2], verts[1])) # Đáy
+            bm.faces.new((verts[4], verts[5], verts[6], verts[7])) # Mặt đường (Đỉnh)
+            bm.faces.new((verts[0], verts[1], verts[5], verts[4])) # Mặt trước
+            bm.faces.new((verts[2], verts[3], verts[7], verts[6])) # Mặt sau
+            bm.faces.new((verts[1], verts[2], verts[6], verts[5])) # Cạnh phải
+            bm.faces.new((verts[3], verts[0], verts[4], verts[7])) # Cạnh trái
+
+            start_x = end_x
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    # ========================================================
+    # 4. GẮN MODIFIERS ĐỂ UỐN CONG THEO PATH
+    # ========================================================
+    subsurf = obj.modifiers.new(name="Bending_Resolution", type='SUBSURF')
+    subsurf.subdivision_type = 'SIMPLE'
+    subsurf.levels = 3
+
+    curve_mod = obj.modifiers.new(name="Bend_Along_Path", type='CURVE')
+    curve_mod.object = target_curve
+    curve_mod.deform_axis = 'POS_X'
+
+    bevel = obj.modifiers.new(name="Stylized_Bevel", type='BEVEL')
+    bevel.width = 0.04
+    bevel.segments = 2
+    bevel.use_clamp_overlap = True
 
     return obj

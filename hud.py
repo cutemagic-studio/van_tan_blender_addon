@@ -600,6 +600,11 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong30 = col.operator("vt.object_action", text="LÁT ĐÁ THEO HÌNH DÁNG YÊU CẦU", icon='BACK')
                 thaoTacQuanTrong31 = col.operator("vt.object_action", text="TẠO VIÊN ĐÁ", icon='BACK')
 
+                thaoTacQuanTrong32 = col.operator("vt.object_action", text="TẠO TƯỜNG ĐÁ", icon='BACK')
+                thaoTacQuanTrong33 = col.operator("vt.object_action", text="LÀM MÓP BỀ MẶT", icon='BACK')
+                thaoTacQuanTrong34 = col.operator("vt.object_action", text="DỌN DẸP LƯỚI THỪA", icon='BACK')
+                thaoTacQuanTrong35 = col.operator("vt.object_action", text="TẠO CON ĐƯỜNG LÁT ĐÁ", icon='BACK')
+
                 thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
                 thaoTacQuanTrong01d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FIT_UNIFORM.Z'
@@ -652,6 +657,10 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong30.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_PAVEMENT_THEO_HINH_DANG_YEU_CAU.Z'
 
                 thaoTacQuanTrong31.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_chunky_stylized_rock.Z'
+                thaoTacQuanTrong32.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_procedural_stone_wall.Z'
+                thaoTacQuanTrong33.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.apply_stone_surface_damage.Z'
+                thaoTacQuanTrong34.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.remove_redundant_edges.Z'
+                thaoTacQuanTrong35.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_procedural_stone_path.Z'
 
                 thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_island_blockout.Z'
 
@@ -805,6 +814,8 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             row_settings.prop(cfg, "bevel_width", text="Độ Bo Cạnh")
 
             #####
+            #####
+            #####
 
             settings_box = main_box.box()
             settings_box.label(text="Config Khuôn viên lát đá:", icon='LINENUMBERS_ON')
@@ -831,9 +842,80 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             row_settings.prop(cfg, "pavement_bevel_v", text="Bo Cạnh Dọc")
 
 
+            #####
+            #####
+            #####
+
+            settings_box = main_box.box()
+            settings_box.label(text="Config Tường Đá:", icon='LINENUMBERS_ON')
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_wall_wall_alignment", text="Căn Lề Curve")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_wall_num_layers", text="Số Lớp Đá")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_wall_layer_height", text="Chiều Cao Lớp")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_wall_wall_thickness", text="Bề Dày Tường")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_wall_min_width", text="Chiều Dài Min")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_wall_max_width", text="Chiều Dài Max")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_wall_gap_size", text="Khe Hở (Vữa)")
 
             #####
-            
+            #####
+            #####
+            settings_box = main_box.box()
+            settings_box.label(text="Config Làm Gồ Ghề Mặt Phẳng:", icon='LINENUMBERS_ON')
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_surface_damage_inset_thickness", text="Độ Dày Viền (Inset)")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_surface_damage_noise_strength", text="Cường Độ Lồi / Lõm")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_surface_damage_noise_scale", text="Độ Chi Tiết (Noise Scale)")
+
+            #####
+            #####
+            #####
+            settings_box = main_box.box()
+            settings_box.label(text="Config Làm Con Đường Lát Đá", icon='LINENUMBERS_ON')
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_path_alignment", text="Căn Lề")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_path_num_lanes", text="Số Làn Đá")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_path_lane_width", text="Bề Rộng Làn")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_path_stone_thickness", text="Độ Dày Đá")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_path_min_length", text="Chiều Dài Min")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_path_max_length", text="Chiều Dài Max")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "stone_path_gap_size", text="Khe Hở (Vữa)")
+
+            #####
+            #####
+            #####
+
             settings_box = main_box.box()
             settings_box.label(text="Config Sắp Xếp Trục Ngang (XY):", icon='LINENUMBERS_ON')
             

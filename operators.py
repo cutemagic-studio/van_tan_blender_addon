@@ -642,9 +642,9 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             active_obj = context.active_object
             selected_objs = context.selected_objects
 
-            if not active_obj or len(selected_objs) < 2:
-                self.report({'WARNING'}, "Cần chọn ít nhất 2 object và có 1 cái Active!")
-                return {'CANCELLED'}
+            # if not active_obj or len(selected_objs) < 1:
+            #     self.report({'WARNING'}, "Cần chọn ít nhất 1 object và có 1 cái Active!")
+            #     return {'CANCELLED'}
 
             # Phân loại: Ngăn xếp Mới hay Tuần tự
             # (Trong logic cơ bản, cả hai đều dùng arrange_objects_grid 
@@ -667,9 +667,9 @@ class CMC_GiaoDienThucThiChucNang(bpy.types.Operator):
             active_obj = context.active_object
             selected_objs = context.selected_objects
 
-            if not active_obj or len(selected_objs) < 2:
-                self.report({'WARNING'}, "Cần chọn ít nhất 2 object và có 1 cái Active!")
-                return {'CANCELLED'}
+            # if not active_obj or len(selected_objs) < 2:
+            #     self.report({'WARNING'}, "Cần chọn ít nhất 2 object và có 1 cái Active!")
+            #     return {'CANCELLED'}
 
             # Gọi logic xử lý hướng (Lấy phần cuối của chuỗi action)
             direction = self.action.split('.')[-1] 

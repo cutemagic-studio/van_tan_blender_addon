@@ -280,9 +280,9 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
 
     elif alignMethod == 'ALIGN_KEEP':
         print('ALIGN_KEEP')
-        if len(context.selected_objects) < 2:
-            print("Cần chọn ít nhất 1 vật thể mục tiêu và 1 vật thể Active")
-            return
+        # if len(context.selected_objects) < 2:
+        #     print("Cần chọn ít nhất 1 vật thể mục tiêu và 1 vật thể Active")
+        #     return
 
         # C là vật thể đang active (được chọn cuối cùng) - Vật thể sẽ di chuyển
         obj_c = context.active_object
@@ -1667,6 +1667,51 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
 
     elif alignMethod == 'generate_chunky_stylized_rock':
         logic_high_upgrade.generate_chunky_stylized_rock(self, context)
+        return
+
+    elif alignMethod == 'generate_procedural_stone_wall':
+        active_obj = context.active_object
+        # logic_high_upgrade.generate_procedural_stone_wall(
+        logic_high_upgrade.generate_procedural_stone_wall_v2(
+            self, context,
+            target_curve = active_obj,
+            alignment = config.stone_wall_wall_alignment,
+            num_layers = config.stone_wall_num_layers,
+            layer_height = config.stone_wall_layer_height,
+            wall_thickness = config.stone_wall_wall_thickness,
+            min_width = config.stone_wall_min_width,
+            max_width = config.stone_wall_max_width,
+            gap_size = config.stone_wall_gap_size,
+        )
+        return
+
+    elif alignMethod == 'generate_procedural_stone_path':
+        active_obj = context.active_object
+        # logic_high_upgrade.generate_procedural_stone_path(
+        logic_high_upgrade.generate_procedural_stone_path_v2(
+            self, context,
+            target_curve = active_obj,
+            alignment= config.stone_path_alignment,
+            num_lanes = config.stone_path_num_lanes,
+            lane_width = config.stone_path_lane_width,
+            stone_thickness = config.stone_path_stone_thickness,
+            min_length = config.stone_path_min_length,
+            max_length = config.stone_path_max_length,
+            gap_size = config.stone_path_gap_size,
+        )
+        return
+
+    elif alignMethod == 'apply_stone_surface_damage':
+        # logic_high_upgrade.apply_stone_surface_damage(self, context)
+        logic_high_upgrade.apply_stone_surface_damage_upgrade(self, context,
+              inset_thickness = config.stone_surface_damage_inset_thickness,
+              noise_strength = config.stone_surface_damage_noise_strength,
+              noise_scale = config.stone_surface_damage_noise_scale
+        )
+        return
+
+    elif alignMethod == 'remove_redundant_edges':
+        logic_high_upgrade.remove_redundant_edges(self, context)
         return
 
 

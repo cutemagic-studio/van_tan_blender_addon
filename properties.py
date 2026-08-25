@@ -104,6 +104,8 @@ class CMC_SortingConfig(bpy.types.PropertyGroup):
     """Tạo dải cỏ rủ Stylized bao quanh khối đất"""
 
     # --- PHẦN LOGIC TẠO SÂN ĐÁ STYLIZED (PAVEMENT) ---
+    # --- PHẦN LOGIC TẠO SÂN ĐÁ STYLIZED (PAVEMENT) ---
+    # --- PHẦN LOGIC TẠO SÂN ĐÁ STYLIZED (PAVEMENT) ---
 
     pavement_area_size: bpy.props.FloatProperty(
         name="Kích Thước Sân",
@@ -166,8 +168,189 @@ class CMC_SortingConfig(bpy.types.PropertyGroup):
         step=1
     ) # type: ignore
 
+    # --- PHẦN TƯỜNG ĐÁ ---
+    # --- PHẦN TƯỜNG ĐÁ ---
+    # --- PHẦN TƯỜNG ĐÁ ---
+    stone_wall_num_layers: bpy.props.IntProperty(
+        name="Số Lớp Đá",
+        description="Số lớp đá xếp chồng theo chiều ngang",
+        default=3,
+        min=1,
+        max=20
+    ) # type: ignore
+
+    stone_wall_wall_alignment: bpy.props.EnumProperty(
+        name="Căn Lề Curve",
+        description="Vị trí của bức tường so với đường dẫn Curve",
+        items=[
+            ('CENTER', "Ở Giữa", "Đường Curve chạy xuyên qua chính giữa tường"),
+            ('LEFT', "Bên Trái", "Tường nằm hoàn toàn về bên trái của Curve"),
+            ('RIGHT', "Bên Phải", "Tường nằm hoàn toàn về bên phải của Curve")
+        ],
+        default='CENTER'
+    ) # type: ignore
+
+    stone_wall_layer_height: bpy.props.FloatProperty(
+        name="Chiều Cao Lớp",
+        description="Chiều cao của mỗi lớp đá",
+        default=0.4,
+        min=0.05,
+        max=5.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_wall_wall_thickness: bpy.props.FloatProperty(
+        name="Bề Dày Tường",
+        description="Độ dày của bức tường đá",
+        default=0.3,
+        min=0.05,
+        max=5.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_wall_min_width: bpy.props.FloatProperty(
+        name="Chiều Dài Min",
+        description="Chiều dài ngắn nhất của một viên đá",
+        default=0.4,
+        min=0.05,
+        max=5.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_wall_max_width: bpy.props.FloatProperty(
+        name="Chiều Dài Max",
+        description="Chiều dài dài nhất của một viên đá",
+        default=1.0,
+        min=0.1,
+        max=10.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_wall_gap_size: bpy.props.FloatProperty(
+        name="Khe Hở (Vữa)",
+        description="Khoảng cách khe hở giữa các viên đá",
+        default=0.03,
+        min=0.0,
+        max=0.2,
+        precision=3,
+        unit='LENGTH'
+    ) # type: ignore
+
+    # LÀM GỒ GHỀ MẶT PHẲNG
+    # LÀM GỒ GHỀ MẶT PHẲNG
+    # LÀM GỒ GHỀ MẶT PHẲNG
+
+    stone_surface_damage_inset_thickness: bpy.props.FloatProperty(
+        name="Độ Dày Viền (Inset)",
+        description="Độ rộng của vành đai an toàn giữ cho mép đá không bị rách",
+        default=0.02,
+        min=0.001,
+        max=0.2,
+        precision=3,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_surface_damage_noise_strength: bpy.props.FloatProperty(
+        name="Cường Độ Lồi / Lõm",
+        description="Độ sâu của vết lõm hoặc độ nhô cao của phần lồi",
+        default=0.04,
+        min=0.0,
+        max=1.0,
+        precision=3,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_surface_damage_noise_scale: bpy.props.FloatProperty(
+        name="Độ Chi Tiết (Noise Scale)",
+        description="Kích thước của dải sóng nhiễu. Số nhỏ = Sóng to thoai thoải; Số lớn = Gồ ghề lắt nhắt",
+        default=2.5,
+        min=0.1,
+        max=50.0,
+        precision=2
+    ) # type: ignore
+
+
+    # TẠO ĐƯỜNG LÁT ĐÁ
+    # TẠO ĐƯỜNG LÁT ĐÁ
+    # TẠO ĐƯỜNG LÁT ĐÁ
+
+    stone_path_alignment: bpy.props.EnumProperty(
+        name="Căn Lề",
+        description="Vị trí của con đường so với đường Curve",
+        items=[
+            ('CENTER', "Ở Giữa", "Đường Curve chạy xuyên qua chính giữa con đường"),
+            ('LEFT', "Bên Trái", "Con đường lấn sang trái đường Curve"),
+            ('RIGHT', "Bên Phải", "Con đường lấn sang phải đường Curve")
+        ],
+        default='CENTER'
+    ) # type: ignore
+
+    stone_path_num_lanes: bpy.props.IntProperty(
+        name="Số Làn Đá",
+        description="Số làn đá ghép ngang lại thành đường",
+        default=3,
+        min=1,
+        max=30
+    ) # type: ignore
+
+    stone_path_lane_width: bpy.props.FloatProperty(
+        name="Bề Rộng Làn",
+        description="Bề rộng của mỗi làn đá",
+        default=0.4,
+        min=0.05,
+        max=5.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_path_stone_thickness: bpy.props.FloatProperty(
+        name="Độ Dày Đá",
+        description="Độ dày của viên đá (phần nhô lên khỏi mặt đất)",
+        default=0.15,
+        min=0.01,
+        max=2.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_path_min_length: bpy.props.FloatProperty(
+        name="Chiều Dài Min",
+        description="Chiều dài ngắn nhất của 1 viên đá dọc theo đường",
+        default=0.4,
+        min=0.05,
+        max=5.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_path_max_length: bpy.props.FloatProperty(
+        name="Chiều Dài Max",
+        description="Chiều dài dài nhất của 1 viên đá dọc theo đường",
+        default=1.0,
+        min=0.1,
+        max=20.0,
+        precision=2,
+        unit='LENGTH'
+    ) # type: ignore
+
+    stone_path_gap_size: bpy.props.FloatProperty(
+        name="Khe Hở (Vữa)",
+        description="Khoảng cách mạch vữa/đất giữa các viên đá",
+        default=0.03,
+        min=0.0,
+        max=0.5,
+        precision=3,
+        unit='LENGTH'
+    ) # type: ignore
+
     # --- PHẦN LOGIC LƯỚI (GRID) ---
-    
+    # --- PHẦN LOGIC LƯỚI (GRID) ---
+    # --- PHẦN LOGIC LƯỚI (GRID) ---
+
     # TRỤC NGANG
     spacing_xy_axis: bpy.props.FloatProperty(
         name="Khoảng Cách", 
