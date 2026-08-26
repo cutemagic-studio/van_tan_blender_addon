@@ -98,6 +98,15 @@ class CMC_SortingConfig(bpy.types.PropertyGroup):
         step=1
     )
 
+    bulge_amount: bpy.props.FloatProperty(
+        name="Độ Phồng Bụng (Bulge Amount)",
+        description="Đẩy phần giữa của dải cỏ phồng ra ngoài tạo cảm giác múp míp (Cozy/Stylized)",
+        default=0.15,  # Mặc định là 0.15 (15cm) để cỏ phồng rõ rệt hơn
+        min=0.0,
+        max=1.0,
+        step=1         # Tăng giảm từng 0.01m khi kéo chuột
+    )
+
     random_seed: bpy.props.IntProperty(
         name="Thay Đổi Ngẫu Nhiên (Seed)", default=0, min=0, max=9999
     )

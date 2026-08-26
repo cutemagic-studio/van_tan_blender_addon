@@ -1629,6 +1629,27 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         )
         return
 
+    elif alignMethod == 'generate_grass_overhang_bulge':
+        active_obj = context.active_object
+        if active_obj and active_obj.type == 'MESH':
+
+            safe_max = max(config.grass_min_length, config.grass_max_length)
+
+            # logic_high_upgrade.generate_grass_overhang_bulge(
+            logic_high_upgrade.generate_grass_overhang_bulge_v2(
+                self, context,
+                soil_obj = active_obj,
+                min_length = config.grass_min_length,
+                max_length = safe_max,
+                wave_frequency = config.wave_frequency,
+                grass_thickness = config.grass_thickness,
+                random_seed = config.random_seed,
+                segment_length = config.segment_length,
+                bevel_width = config.bevel_width,
+                bulge_amount = config.bulge_amount,
+            )
+        return
+
     elif alignMethod == 'GENERATE_PAVEMENT':
         # Gọi hàm từ module chứa logic (giả sử là logic_upgrade)
         logic_high_upgrade.generate_stylized_pavement(
@@ -1699,6 +1720,12 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
             max_length = config.stone_path_max_length,
             gap_size = config.stone_path_gap_size,
         )
+        return
+
+    elif alignMethod == 'build_wall_from_proxy':
+        active_obj = context.active_object
+        # logic_high_upgrade.build_wall_ultimate(active_obj, brick_collection_name="Cute_Bricks", overlap_size=0.05)
+        logic_high_upgrade.build_ultimate_cozy_wall(active_obj, brick_collection_name="Cute_Bricks", overlap_size=0.05)
         return
 
     elif alignMethod == 'apply_stone_surface_damage':

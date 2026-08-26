@@ -595,6 +595,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong27d = col.operator("vt.object_action", text="GENERATE_CHUNKY_FOLIAGE (XYZ)", icon='BACK')
 
                 thaoTacQuanTrong28 = col.operator("vt.object_action", text="TẠO DẢI CỎ BIÊN (XYZ)", icon='BACK')
+                thaoTacQuanTrong28d = col.operator("vt.object_action", text="TẠO DẢI CỎ BIÊN PHỒNG", icon='BACK')
 
                 thaoTacQuanTrong29 = col.operator("vt.object_action", text="TẠO SÂN ĐÁ (PAVEMENT)", icon='BACK')
                 thaoTacQuanTrong30 = col.operator("vt.object_action", text="LÁT ĐÁ THEO HÌNH DÁNG YÊU CẦU", icon='BACK')
@@ -653,6 +654,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong27d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_CHUNKY_FOLIAGE.Z'
 
                 thaoTacQuanTrong28.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.FILL_GRASS_OVERHANG.Z'
+                thaoTacQuanTrong28d.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_grass_overhang_bulge.Z'
                 thaoTacQuanTrong29.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_PAVEMENT.Z'
                 thaoTacQuanTrong30.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.GENERATE_PAVEMENT_THEO_HINH_DANG_YEU_CAU.Z'
 
@@ -662,7 +664,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong34.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.remove_redundant_edges.Z'
                 thaoTacQuanTrong35.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_procedural_stone_path.Z'
 
-                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_island_blockout.Z'
+                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.build_wall_from_proxy.Z'
 
 
                 col.scale_y = 1.5
@@ -812,6 +814,9 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
             row_settings = settings_box.row(align=True)
             row_settings.prop(cfg, "bevel_width", text="Độ Bo Cạnh")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "bulge_amount", text="Độ Phồng Bụng")
 
             #####
             #####

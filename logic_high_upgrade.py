@@ -1340,3 +1340,670 @@ def generate_procedural_stone_path_v2(
     bevel.use_clamp_overlap = True
 
     return obj
+
+
+
+def build_wall_from_proxy(
+        proxy_obj,
+        brick_collection_name="Cute_Bricks",
+        gap_size=0.02
+):
+    if proxy_obj.type != 'MESH':
+        print("Vui lòng chọn một bức tường (Mesh) làm khuôn!")
+        return
+
+    if brick_collection_name not in bpy.data.collections:
+        print(f"Không tìm thấy Collection tên là '{brick_collection_name}'!")
+        return
+
+    brick_col = bpy.data.collections[brick_collection_name]
+    if len(brick_col.objects) == 0:
+        print("Kho gạch của bạn đang trống!")
+        return
+
+    # ==========================================
+    # 1. QUÉT DATA KHO GẠCH (Lưu vào mảng)
+    # ==========================================
+    print("Đang đo đạc kích thước kho gạch...")
+    brick_library = []
+
+    for obj in brick_col.objects:
+        if obj.type == 'MESH':
+            dim = obj.dimensions
+            if dim.z == 0: continue
+
+            brick_library.append({
+                'obj': obj,
+                'dim_x': dim.x, # Chiều Rộng gốc
+                'dim_y': dim.y, # Bề Dày gốc
+                'dim_z': dim.z  # Chiều Cao gốc
+            })
+
+    out_col_name = proxy_obj.name + "_Final_Wall"
+    if out_col_name in bpy.data.collections:
+        out_col = bpy.data.collections[out_col_name]
+    else:
+        out_col = bpy.data.collections.new(out_col_name)
+        bpy.context.scene.collection.children.link(out_col)
+
+    # ==========================================
+    # 2. ĐỌC KHUÔN TƯỜNG
+    # ==========================================
+    bm = bmesh.new()
+    bm.from_mesh(proxy_obj.data)
+    bm.transform(proxy_obj.matrix_world)
+
+    print(f"Bắt đầu lắp gạch cho {len(bm.faces)} ô trống...")
+
+    for face in bm.faces:
+        if len(face.verts) != 4:
+            continue
+
+        center = face.calc_center_bounds()
+        normal = face.normal.normalized()
+        world_up = Vector((0, 0, 1))
+
+        if abs(normal.z) > 0.99:
+            continue
+
+        right = world_up.cross(normal).normalized()
+        up = normal.cross(right).normalized()
+
+        xs = [right.dot(v.co) for v in face.verts]
+        zs = [up.dot(v.co) for v in face.verts]
+
+        face_width = max(xs) - min(xs)
+        face_height = max(zs) - min(zs)
+
+        if face_height == 0: continue
+
+        target_w = max(0.01, face_width - gap_size)
+        target_h = max(0.01, face_height - gap_size)
+
+        # ==========================================
+        # 3. THUẬT TOÁN TÌM KIẾM VIÊN GẠCH KHỚP NHẤT
+        # ==========================================
+        # So sánh tổng sai số giữa Chiều Rộng và Chiều Cao của gạch với ô trống
+        def calculate_size_difference(brick_data):
+            diff_w = abs(brick_data['dim_x'] - target_w)
+            diff_h = abs(brick_data['dim_z'] - target_h)
+            return diff_w + diff_h # Viên nào có tổng sai số nhỏ nhất sẽ được chọn
+
+        best_brick = min(brick_library, key=calculate_size_difference)
+
+        # ==========================================
+        # 4. INSTANCE VÀ ĐẶT VÀO TƯỜNG (KHÔNG SCALE)
+        # ==========================================
+        new_brick = bpy.data.objects.new(best_brick['obj'].name + "_clone", best_brick['obj'].data)
+        new_brick.location = center
+
+        mat_rot = Matrix.Identity(3)
+        mat_rot.col[0] = right
+        mat_rot.col[1] = normal
+        mat_rot.col[2] = up
+        new_brick.rotation_euler = mat_rot.to_euler()
+
+        # [QUAN TRỌNG]: Giữ nguyên kích thước 100% gốc của viên gạch
+        new_brick.scale = (1.0, 1.0, 1.0)
+
+        out_col.objects.link(new_brick)
+
+    bm.free()
+    print("Xây tường hoàn tất! Tất cả gạch được giữ nguyên kích thước gốc.")
+
+
+def build_wall_ultimate(
+        proxy_obj,
+        brick_collection_name="Cute_Bricks",
+        overlap_size=0.05  # Độ cắn vào nhau (5cm)
+):
+    if proxy_obj.type != 'MESH':
+        print("Vui lòng chọn một bức tường (Mesh) làm khuôn!")
+        return
+
+    if brick_collection_name not in bpy.data.collections:
+        print(f"Không tìm thấy Collection tên '{brick_collection_name}'!")
+        return
+
+    brick_col = bpy.data.collections[brick_collection_name]
+    if len(brick_col.objects) == 0:
+        print("Kho gạch của bạn đang trống!")
+        return
+
+    # ==========================================
+    # 1. QUÉT KHO GẠCH (Lấy kích thước thực)
+    # ==========================================
+    brick_library = []
+    for obj in brick_col.objects:
+        if obj.type == 'MESH':
+            dim = obj.dimensions
+            if dim.z == 0: continue
+            brick_library.append({
+                'obj': obj,
+                'dim_x': dim.x,
+                'dim_y': dim.y,
+                'dim_z': dim.z
+            })
+
+    out_col_name = proxy_obj.name + "_Final_Wall"
+    if out_col_name in bpy.data.collections:
+        out_col = bpy.data.collections[out_col_name]
+    else:
+        out_col = bpy.data.collections.new(out_col_name)
+        bpy.context.scene.collection.children.link(out_col)
+
+    # ==========================================
+    # 2. ĐỌC KHUÔN TƯỜNG (HỖ TRỢ MODIFIER)
+    # ==========================================
+    # Xin Blender bản sao của Object đã tính toán tất cả Modifiers (Bao gồm Curve Modifier)
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    eval_obj = proxy_obj.evaluated_get(depsgraph)
+    eval_mesh = eval_obj.to_mesh()
+
+    bm = bmesh.new()
+    bm.from_mesh(eval_mesh)
+    bm.transform(proxy_obj.matrix_world)
+
+    # Dọn dẹp bộ nhớ tạm sau khi đã lấy xong BMesh
+    eval_obj.to_mesh_clear()
+
+    for face in bm.faces:
+        if len(face.verts) != 4: continue
+
+        center = face.calc_center_bounds()
+        normal = face.normal.normalized()
+        world_up = Vector((0, 0, 1))
+
+        if abs(normal.z) > 0.99: continue
+
+        right = world_up.cross(normal).normalized()
+        up = normal.cross(right).normalized()
+
+        xs = [right.dot(v.co) for v in face.verts]
+        zs = [up.dot(v.co) for v in face.verts]
+
+        face_width = max(xs) - min(xs)
+        face_height = max(zs) - min(zs)
+        if face_height == 0: continue
+
+        # ==========================================
+        # 3. YÊU CẦU 1: TÍNH KÍCH THƯỚC MỤC TIÊU CÓ OVERLAP
+        # ==========================================
+        # Thay vì tìm viên vừa khít ô, ta tìm viên to hơn ô 5cm
+        target_w = face_width + overlap_size
+        target_h = face_height + overlap_size
+
+        # ==========================================
+        # 4. YÊU CẦU 2: TÌM VIÊN KHỚP NHẤT (THEO SIZE THỰC)
+        # ==========================================
+        # Phải dùng kích thước thực để so sánh, vì nếu chỉ so Tỷ lệ mà không Scale,
+        # thuật toán có thể bốc nhầm viên gạch khổng lồ nhét vào lỗ siêu nhỏ!
+        def match_exact_size(brick_data):
+            diff_w = abs(brick_data['dim_x'] - target_w)
+            diff_h = abs(brick_data['dim_z'] - target_h)
+            return diff_w + diff_h
+
+        best_brick = min(brick_library, key=match_exact_size)
+
+        # ==========================================
+        # 5. ĐẶT GẠCH VÀ KHÓA SCALE
+        # ==========================================
+        new_brick = bpy.data.objects.new(best_brick['obj'].name + "_clone", best_brick['obj'].data)
+        new_brick.location = center
+
+        mat_rot = Matrix.Identity(3)
+        mat_rot.col[0] = right
+        mat_rot.col[1] = normal
+        mat_rot.col[2] = up
+        new_brick.rotation_euler = mat_rot.to_euler()
+
+        # BẤT DI BẤT DỊCH: Luôn là 1.0
+        new_brick.scale = (1.0, 1.0, 1.0)
+
+        out_col.objects.link(new_brick)
+
+    bm.free()
+    print("Xây tường hoàn tất! Gạch giữ nguyên kích thước 100% và lấn nhau tự nhiên.")
+
+
+
+def build_ultimate_cozy_wall(
+        proxy_obj,
+        brick_collection_name="Cute_Bricks",
+        overlap_size=0.05
+):
+    if proxy_obj.type != 'MESH':
+        print("Vui lòng chọn một bức tường (Mesh) làm khuôn!")
+        return
+
+    if brick_collection_name not in bpy.data.collections:
+        print(f"Không tìm thấy Collection tên '{brick_collection_name}'!")
+        return
+
+    brick_col = bpy.data.collections[brick_collection_name]
+    if len(brick_col.objects) == 0:
+        print("Kho gạch của bạn đang trống!")
+        return
+
+    # ==========================================
+    # 1. QUÉT KHO GẠCH
+    # ==========================================
+    brick_library = []
+    for obj in brick_col.objects:
+        if obj.type == 'MESH':
+            dim = obj.dimensions
+            if dim.z == 0: continue
+            brick_library.append({
+                'obj': obj,
+                'dim_x': dim.x,
+                'dim_y': dim.y,
+                'dim_z': dim.z
+            })
+
+    out_col_name = proxy_obj.name + "_Final_Bricks"
+    if out_col_name in bpy.data.collections:
+        out_col = bpy.data.collections[out_col_name]
+    else:
+        out_col = bpy.data.collections.new(out_col_name)
+        bpy.context.scene.collection.children.link(out_col)
+
+    # ==========================================
+    # 2. ĐỌC KHUÔN TƯỜNG (HỖ TRỢ MODIFIER UỐN CONG)
+    # ==========================================
+    # Đọc lưới đã bị uốn cong bởi Curve Modifier
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    eval_obj = proxy_obj.evaluated_get(depsgraph)
+    eval_mesh = eval_obj.to_mesh()
+
+    bm = bmesh.new()
+    bm.from_mesh(eval_mesh)
+    bm.transform(proxy_obj.matrix_world)
+
+    for face in bm.faces:
+        if len(face.verts) != 4: continue
+
+        center = face.calc_center_bounds()
+        normal = face.normal.normalized()
+        world_up = Vector((0, 0, 1))
+
+        if abs(normal.z) > 0.99: continue
+
+        # Thuật toán "Dây dọi" giúp gạch luôn đứng thẳng dù khuôn có bị méo
+        right = world_up.cross(normal).normalized()
+        up = normal.cross(right).normalized()
+
+        xs = [right.dot(v.co) for v in face.verts]
+        zs = [up.dot(v.co) for v in face.verts]
+
+        face_width = max(xs) - min(xs)
+        face_height = max(zs) - min(zs)
+        if face_height == 0: continue
+
+        # ==========================================
+        # 3. TÌM VIÊN GẠCH KHỚP NHẤT (CÓ OVERLAP)
+        # ==========================================
+        target_w = face_width + overlap_size
+        target_h = face_height + overlap_size
+
+        def match_exact_size(brick_data):
+            diff_w = abs(brick_data['dim_x'] - target_w)
+            diff_h = abs(brick_data['dim_z'] - target_h)
+            return diff_w + diff_h
+
+        best_brick = min(brick_library, key=match_exact_size)
+
+        # ==========================================
+        # 4. INSTANCE VÀ KHÓA SCALE
+        # ==========================================
+        new_brick = bpy.data.objects.new(best_brick['obj'].name + "_clone", best_brick['obj'].data)
+        new_brick.location = center
+
+        mat_rot = Matrix.Identity(3)
+        mat_rot.col[0] = right
+        mat_rot.col[1] = normal
+        mat_rot.col[2] = up
+        new_brick.rotation_euler = mat_rot.to_euler()
+
+        # BẤT DI BẤT DỊCH: Khóa Scale ở mức 100% để bảo toàn hình dáng gạch
+        new_brick.scale = (1.0, 1.0, 1.0)
+
+        out_col.objects.link(new_brick)
+
+    bm.free()
+    eval_obj.to_mesh_clear() # Giải phóng bộ nhớ ảo
+    print("Xây tường hoàn tất! Siêu mượt, lấn nhau 5cm và uốn cong chuẩn xác.")
+
+
+
+def generate_grass_overhang_bulge(
+        self,
+        context,
+        soil_obj,
+        min_length=0.1,
+        max_length=0.4,
+        wave_frequency=5.0,
+        grass_thickness=0.08,
+        random_seed=42.0,
+        segment_length=0.1,
+        bevel_width=0.02,
+        bulge_amount=0.08
+):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    # Tính toán hướng đẩy (Normals)
+    vert_out_dirs = {}
+    for edge in boundary_edges:
+        for v in edge.verts:
+            if v not in vert_out_dirs:
+                side_faces = [f for f in v.link_faces if abs(f.normal.z) < 0.2]
+                avg_dir = Vector((0.0, 0.0, 0.0))
+                if side_faces:
+                    for f in side_faces:
+                        avg_dir += f.normal
+                else:
+                    avg_dir = v.normal.copy()
+
+                avg_dir.z = 0.0
+                if avg_dir.length > 0:
+                    avg_dir.normalize()
+                else:
+                    avg_dir = Vector((1.0, 0.0, 0.0))
+                vert_out_dirs[v] = avg_dir
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    # ==========================================
+    # TẠO VERTEX GROUP ĐỂ KIỂM SOÁT ĐỘ PHỒNG
+    # ==========================================
+    vg = grass_obj.vertex_groups.new(name="Bulge_Weight")
+    vg_idx = vg.index
+
+    # Tính toán tỷ lệ phồng (Weights)
+    max_thick = grass_thickness + bulge_amount
+    if max_thick <= 0: max_thick = 0.001
+
+    weight_top = grass_thickness / max_thick
+    weight_mid = 1.0
+    weight_bot = grass_thickness / max_thick   # [ĐÃ SỬA] Nhả độ dày cho đáy bằng với mép trên, để Subsurf tự bo tròn
+
+    gbm = bmesh.new()
+    dvert_lay = gbm.verts.layers.deform.verify() # Lớp dữ liệu để ghi Vertex Weights
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0], edge.verts[1]
+        out1 = vert_out_dirs[v1]
+        out2 = vert_out_dirs[v2]
+
+        edge_len = (v2.co - v1.co).length
+        num_segs = max(2, int(edge_len / segment_length))
+
+        prev_top_v = None
+        prev_mid_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.co.lerp(v2.co, t)
+
+            curr_out = out1.lerp(out2, t)
+            if curr_out.length > 0: curr_out.normalize()
+            else: curr_out = Vector((1.0, 0.0, 0.0))
+
+            wave_x = math.sin(curr_pos.x * wave_frequency + random_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + random_seed)
+            raw_wave = (wave_x + wave_y) / 2.828 + 0.5
+            organic_variance = math.sin(curr_pos.x * (wave_frequency * 0.4) + random_seed * 1.5)
+            raw_wave += organic_variance * 0.15
+            raw_wave = max(0.0, min(1.0, raw_wave))
+            smooth_wave = raw_wave * raw_wave * (3.0 - 2.0 * raw_wave)
+
+            drop_z = -(min_length + smooth_wave * (max_length - min_length))
+
+            # ==========================================
+            # DỰNG LƯỚI PHẲNG LÌ (KHÔNG CÓ BULGE AMOUNT)
+            pos_top = curr_pos + curr_out * 0.002
+            # [ĐÃ SỬA] Hạ điểm bụng từ 0.4 (40%) xuống 0.55 (55%) để độ phồng trĩu xuống tự nhiên hơn
+            pos_mid = curr_pos + curr_out * 0.002 + Vector((0, 0, drop_z * 0.55))
+            pos_bot = curr_pos + curr_out * 0.002 + Vector((0, 0, drop_z))
+
+            v_top = gbm.verts.new(pos_top)
+            v_mid = gbm.verts.new(pos_mid)
+            v_bot = gbm.verts.new(pos_bot)
+
+            # SƠN TRỌNG SỐ (WEIGHTS) CHO TỪNG ĐỈNH
+            v_top[dvert_lay][vg_idx] = weight_top
+            v_mid[dvert_lay][vg_idx] = weight_mid
+            v_bot[dvert_lay][vg_idx] = weight_bot
+
+            if prev_top_v and prev_mid_v and prev_bot_v:
+                try:
+                    f1 = gbm.faces.new((prev_top_v, v_top, v_mid, prev_mid_v))
+                    f1.normal_update()
+                    if f1.normal.dot(curr_out) < 0: f1.normal_flip()
+
+                    f2 = gbm.faces.new((prev_mid_v, v_mid, v_bot, prev_bot_v))
+                    f2.normal_update()
+                    if f2.normal.dot(curr_out) < 0: f2.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_mid_v = v_mid
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    # ==========================================
+    # CẬP NHẬT MODIFIERS ĐỂ PHỒNG ĐÚNG CHUẨN
+    # ==========================================
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = max_thick  # Tổng độ dày = Bề dày gốc + Độ phồng
+    sol_mod.offset = 1.0           # [QUAN TRỌNG] Bắt buộc là 1.0 để đẩy toàn bộ ra mặt ngoài
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+    sol_mod.vertex_group = "Bulge_Weight" # Chỉ định Vertex Group vừa tạo
+
+    # Modifier bo cạnh (đã tắt theo yêu cầu của bạn)
+    # bev_mod = grass_obj.modifiers.new(...)
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
+def generate_grass_overhang_bulge_v2(
+        self,
+        context,
+        soil_obj,
+        min_length=0.1,
+        max_length=0.4,
+        wave_frequency=5.0,
+        grass_thickness=0.08,
+        random_seed=42.0,
+        segment_length=0.1,
+        bevel_width=0.02, # Không dùng nhưng giữ để không lỗi UI
+        bulge_amount=0.15
+):
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn.")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    boundary_edges = []
+    for edge in bm.edges:
+        is_top_edge = any(f.normal.z > 0.8 for f in edge.link_faces)
+        is_side_edge = any(abs(f.normal.z) < 0.2 for f in edge.link_faces)
+        if is_top_edge and is_side_edge:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    # Tính hướng đẩy
+    vert_out_dirs = {}
+    for edge in boundary_edges:
+        for v in edge.verts:
+            if v not in vert_out_dirs:
+                side_faces = [f for f in v.link_faces if abs(f.normal.z) < 0.2]
+                avg_dir = Vector((0.0, 0.0, 0.0))
+                if side_faces:
+                    for f in side_faces: avg_dir += f.normal
+                else:
+                    avg_dir = v.normal.copy()
+
+                avg_dir.z = 0.0
+                if avg_dir.length > 0: avg_dir.normalize()
+                else: avg_dir = Vector((1.0, 0.0, 0.0))
+                vert_out_dirs[v] = avg_dir
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    vg = grass_obj.vertex_groups.new(name="Bulge_Weight")
+    vg_idx = vg.index
+
+    # Tính toán Trọng số (Weights)
+    max_thick = grass_thickness + bulge_amount
+    if max_thick <= 0: max_thick = 0.001
+
+    # [MỚI] Thêm trọng số cho điểm Neo (Anchor)
+    weight_anchor = grass_thickness / max_thick
+    weight_top = grass_thickness / max_thick
+    weight_mid = 1.0
+    weight_bot = grass_thickness / max_thick
+
+    gbm = bmesh.new()
+    dvert_lay = gbm.verts.layers.deform.verify()
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0], edge.verts[1]
+        out1 = vert_out_dirs[v1]
+        out2 = vert_out_dirs[v2]
+
+        edge_len = (v2.co - v1.co).length
+        num_segs = max(2, int(edge_len / segment_length))
+
+        prev_anchor_v = None # [MỚI]
+        prev_top_v = None
+        prev_mid_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.co.lerp(v2.co, t)
+
+            curr_out = out1.lerp(out2, t)
+            if curr_out.length > 0: curr_out.normalize()
+            else: curr_out = Vector((1.0, 0.0, 0.0))
+
+            wave_x = math.sin(curr_pos.x * wave_frequency + random_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + random_seed)
+            raw_wave = (wave_x + wave_y) / 2.828 + 0.5
+            organic_variance = math.sin(curr_pos.x * (wave_frequency * 0.4) + random_seed * 1.5)
+            raw_wave += organic_variance * 0.15
+            raw_wave = max(0.0, min(1.0, raw_wave))
+            smooth_wave = raw_wave * raw_wave * (3.0 - 2.0 * raw_wave)
+
+            drop_z = -(min_length + smooth_wave * (max_length - min_length))
+
+            # ==========================================
+            # [MỚI] CẤU TRÚC 4 ĐIỂM TẠO NGÀM MÓC (LIP)
+            # ==========================================
+            # 1. Anchor: Kéo giật lùi vào trong khối đất một đoạn bằng độ dày dải cỏ, nhích lên 2mm tránh lỗi chớp nháy
+            pos_anchor = curr_pos - curr_out * (grass_thickness * 1.5) + Vector((0, 0, 0.002))
+
+            # 2. Top: Đứng ngay mép góc vuông
+            pos_top = curr_pos + curr_out * 0.002 + Vector((0, 0, 0.002))
+
+            # 3. Mid: Bụng phồng trĩu xuống
+            pos_mid = curr_pos + curr_out * 0.002 + Vector((0, 0, drop_z * 0.55))
+
+            # 4. Bot: Mép dưới ôm sát đất
+            pos_bot = curr_pos + curr_out * 0.002 + Vector((0, 0, drop_z))
+
+            v_anchor = gbm.verts.new(pos_anchor)
+            v_top = gbm.verts.new(pos_top)
+            v_mid = gbm.verts.new(pos_mid)
+            v_bot = gbm.verts.new(pos_bot)
+
+            # Sơn Weights
+            v_anchor[dvert_lay][vg_idx] = weight_anchor
+            v_top[dvert_lay][vg_idx] = weight_top
+            v_mid[dvert_lay][vg_idx] = weight_mid
+            v_bot[dvert_lay][vg_idx] = weight_bot
+
+            if prev_anchor_v and prev_top_v and prev_mid_v and prev_bot_v:
+                try:
+                    # [MỚI] Mặt đậy nắp (hướng lên trời)
+                    f0 = gbm.faces.new((prev_anchor_v, v_anchor, v_top, prev_top_v))
+                    f0.normal_update()
+                    if f0.normal.z < 0: f0.normal_flip() # Bắt buộc phải ngửa lên trên
+
+                    # Mặt trên của bụng phồng
+                    f1 = gbm.faces.new((prev_top_v, v_top, v_mid, prev_mid_v))
+                    f1.normal_update()
+                    if f1.normal.dot(curr_out) < 0: f1.normal_flip()
+
+                    # Mặt dưới của bụng phồng
+                    f2 = gbm.faces.new((prev_mid_v, v_mid, v_bot, prev_bot_v))
+                    f2.normal_update()
+                    if f2.normal.dot(curr_out) < 0: f2.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_anchor_v = v_anchor
+            prev_top_v = v_top
+            prev_mid_v = v_mid
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = max_thick
+    sol_mod.offset = 1.0
+    sol_mod.use_even_offset = False
+    sol_mod.use_quality_normals = True
+    sol_mod.vertex_group = "Bulge_Weight"
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
