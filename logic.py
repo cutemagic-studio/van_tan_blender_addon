@@ -1636,7 +1636,8 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
             safe_max = max(config.grass_min_length, config.grass_max_length)
 
             # logic_high_upgrade.generate_grass_overhang_bulge(
-            logic_high_upgrade.generate_grass_overhang_bulge_v3(
+            # logic_high_upgrade.generate_grass_overhang_bulge_v3(
+            logic_high_upgrade.generate_grass_overhang_bulge_v4(
                 self, context,
                 soil_obj = active_obj,
                 min_length = config.grass_min_length,
@@ -1645,7 +1646,7 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
                 grass_thickness = config.grass_thickness,
                 random_seed = config.random_seed,
                 # segment_length = config.segment_length,
-                segment_length = 0.4, # <--- Tăng từ 0.1 lên 0.2 để thưa lưới gấp đôi
+                # segment_length = 0.4, # <--- Tăng từ 0.1 lên 0.2 để thưa lưới gấp đôi
                 bevel_width = config.bevel_width,
                 bulge_amount = config.bulge_amount,
             )

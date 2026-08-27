@@ -2162,6 +2162,172 @@ def generate_grass_overhang_bulge_v3(
     elif hasattr(grass_obj.data, "polygons"):
         grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
 
+
+
+def generate_grass_overhang_bulge_v4(
+        self,
+        context,
+        soil_obj,
+        min_length=0.1,
+        max_length=0.4,
+        wave_frequency=5.0,
+        grass_thickness=0.08,
+        random_seed=42.0,
+        segment_length=0.4,
+        bevel_width=0.02, # Keeping for UI compatibility
+        bulge_amount=0.15
+):
+    self.report({'WARNING'}, "Đang làm. V4")
+    
+    if not soil_obj or soil_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn khối đất làm khuôn. V4")
+        return
+
+    bm = bmesh.new()
+    bm.from_mesh(soil_obj.data)
+    bm.transform(soil_obj.matrix_world)
+
+    # 1. NHẬN DIỆN BIÊN (Sửa lỗi lòng hồ/suối dốc)
+    boundary_edges = []
+    for edge in bm.edges:
+        top_faces = [f for f in edge.link_faces if f.normal.z > 0.5]
+        side_faces = [f for f in edge.link_faces if f.normal.z <= 0.5]
+        if top_faces and side_faces:
+            boundary_edges.append(edge)
+
+    if not boundary_edges:
+        self.report({'ERROR'}, "Không tìm thấy mép biên phù hợp.")
+        bm.free()
+        return
+
+    # 2. TÍNH HƯỚNG ĐẨY MỚI (Từ tâm mặt đất đẩy ra mép)
+    vert_out_dirs = {}
+    for edge in boundary_edges:
+        for v in edge.verts:
+            if v not in vert_out_dirs:
+                connected_top_faces = [f for f in v.link_faces if f.normal.z > 0.5]
+                avg_dir = Vector((0.0, 0.0, 0.0))
+                
+                if connected_top_faces:
+                    # Cộng dồn hướng từ tâm các mặt đất lân cận để trung bình góc
+                    for f in connected_top_faces:
+                        f_center = f.calc_center_median()
+                        dir_vec = v.co - f_center
+                        dir_vec.z = 0.0
+                        if dir_vec.length > 0:
+                            avg_dir += dir_vec.normalized()
+                            
+                if avg_dir.length > 0: 
+                    avg_dir.normalize()
+                else: 
+                    avg_dir = Vector((1.0, 0.0, 0.0))
+                    
+                vert_out_dirs[v] = avg_dir
+
+    grass_mesh = bpy.data.meshes.new("Grass_Overhang")
+    grass_obj = bpy.data.objects.new("Stylized_Grass_Overhang", grass_mesh)
+    context.collection.objects.link(grass_obj)
+
+    vg = grass_obj.vertex_groups.new(name="Bulge_Weight")
+    vg_idx = vg.index
+
+    # Trọng số: Top = 0 (vuốt nhọn khít mép), Mid = 1 (phồng tối đa), Bot = 0.1 (nhọn mép dưới)
+    weight_top = 0.0
+    weight_mid = 1.0
+    weight_bot = 0.1
+
+    gbm = bmesh.new()
+    dvert_lay = gbm.verts.layers.deform.verify()
+
+    for edge in boundary_edges:
+        v1, v2 = edge.verts[0], edge.verts[1]
+        out1 = vert_out_dirs[v1]
+        out2 = vert_out_dirs[v2]
+
+        edge_len = (v2.co - v1.co).length
+        # 3. CHỐNG DÀY LƯỚI (Không ép chia đôi các cạnh quá ngắn)
+        num_segs = max(1, round(edge_len / segment_length))
+
+        prev_top_v = None
+        prev_mid_v = None
+        prev_bot_v = None
+
+        for i in range(num_segs + 1):
+            t = i / num_segs
+            curr_pos = v1.co.lerp(v2.co, t)
+
+            curr_out = out1.lerp(out2, t)
+            if curr_out.length > 0: curr_out.normalize()
+            else: curr_out = Vector((1.0, 0.0, 0.0))
+
+            wave_x = math.sin(curr_pos.x * wave_frequency + random_seed)
+            wave_y = math.cos(curr_pos.y * wave_frequency + random_seed)
+            raw_wave = (wave_x + wave_y) / 2.828 + 0.5
+            organic_variance = math.sin(curr_pos.x * (wave_frequency * 0.4) + random_seed * 1.5)
+            raw_wave += organic_variance * 0.15
+            raw_wave = max(0.0, min(1.0, raw_wave))
+            smooth_wave = raw_wave * raw_wave * (3.0 - 2.0 * raw_wave)
+
+            drop_z = -(min_length + smooth_wave * (max_length - min_length))
+
+            # 1. Top: Đặt nằm sát đường biên (nhích Z 0.001 m mỏng nhẹ tránh Z-fighting)
+            pos_top = curr_pos + Vector((0, 0, 0.001))
+
+            # 2. Mid: Đẩy nhẹ ra ngoài và trĩu xuống
+            pos_mid = curr_pos + curr_out * 0.005 + Vector((0, 0, drop_z * 0.45))
+
+            # 3. Bot: Chóp dưới của dải cỏ
+            pos_bot = curr_pos + Vector((0, 0, drop_z))
+
+            v_top = gbm.verts.new(pos_top)
+            v_mid = gbm.verts.new(pos_mid)
+            v_bot = gbm.verts.new(pos_bot)
+
+            # Sơn Weights
+            v_top[dvert_lay][vg_idx] = weight_top
+            v_mid[dvert_lay][vg_idx] = weight_mid
+            v_bot[dvert_lay][vg_idx] = weight_bot
+
+            if prev_top_v and prev_mid_v and prev_bot_v:
+                try:
+                    # Mặt trên (từ mép đất trãi xuống bụng phồng)
+                    f1 = gbm.faces.new((prev_top_v, v_top, v_mid, prev_mid_v))
+                    f1.normal_update()
+                    if f1.normal.dot(curr_out) < 0: f1.normal_flip()
+
+                    # Mặt dưới (từ bụng phồng đến đuôi cỏ)
+                    f2 = gbm.faces.new((prev_mid_v, v_mid, v_bot, prev_bot_v))
+                    f2.normal_update()
+                    if f2.normal.dot(curr_out) < 0: f2.normal_flip()
+                except ValueError:
+                    pass
+
+            prev_top_v = v_top
+            prev_mid_v = v_mid
+            prev_bot_v = v_bot
+
+    bmesh.ops.remove_doubles(gbm, verts=gbm.verts, dist=0.005)
+    bmesh.ops.recalc_face_normals(gbm, faces=gbm.faces)
+
+    gbm.to_mesh(grass_mesh)
+    gbm.free()
+    bm.free()
+
+    # Thêm Solidify để làm phồng bụng cỏ
+    sol_mod = grass_obj.modifiers.new(name="Thick", type='SOLIDIFY')
+    sol_mod.thickness = grass_thickness + bulge_amount
+    sol_mod.offset = 0.0
+    sol_mod.use_even_offset = True
+    sol_mod.vertex_group = "Bulge_Weight"
+
+    sub_mod = grass_obj.modifiers.new(name="Smooth_Block", type='SUBSURF')
+    sub_mod.levels = 1
+
+    if hasattr(grass_obj.data, "shade_smooth"):
+        grass_obj.data.shade_smooth()
+    elif hasattr(grass_obj.data, "polygons"):
+        grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
 def create_bounding_box_for_active():
     # 1. Lấy vật thể đang được chọn (Khuôn gốc)
     target_obj = bpy.context.active_object
