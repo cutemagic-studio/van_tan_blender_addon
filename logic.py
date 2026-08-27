@@ -1723,11 +1723,23 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         )
         return
 
-    elif alignMethod == 'build_wall_from_proxy':
+    elif alignMethod == 'build_ultimate_cozy_wall':
         active_obj = context.active_object
         # logic_high_upgrade.build_wall_ultimate(active_obj, brick_collection_name="Cute_Bricks", overlap_size=0.05)
         logic_high_upgrade.build_ultimate_cozy_wall(active_obj, brick_collection_name="Cute_Bricks", overlap_size=0.05)
         return
+
+    elif alignMethod == 'create_bounding_box_for_active':
+        active_obj = context.active_object
+        logic_high_upgrade.create_bounding_box_for_active()
+        return
+
+    elif alignMethod == 'replace_bounding_box_with_best_brick':
+        active_obj = context.active_object
+        logic_high_upgrade.replace_bounding_box_with_best_brick(brick_collection_name="Cute_Bricks")
+        return
+
+
 
     elif alignMethod == 'apply_stone_surface_damage':
         # logic_high_upgrade.apply_stone_surface_damage(self, context)

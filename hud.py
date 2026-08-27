@@ -602,9 +602,12 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong31 = col.operator("vt.object_action", text="TẠO VIÊN ĐÁ", icon='BACK')
 
                 thaoTacQuanTrong32 = col.operator("vt.object_action", text="TẠO TƯỜNG ĐÁ", icon='BACK')
+                thaoTacQuanTrong32e = col.operator("vt.object_action", text="TẠO TƯỜNG ĐÁ COZY NU NU", icon='BACK')
                 thaoTacQuanTrong33 = col.operator("vt.object_action", text="LÀM MÓP BỀ MẶT", icon='BACK')
                 thaoTacQuanTrong34 = col.operator("vt.object_action", text="DỌN DẸP LƯỚI THỪA", icon='BACK')
                 thaoTacQuanTrong35 = col.operator("vt.object_action", text="TẠO CON ĐƯỜNG LÁT ĐÁ", icon='BACK')
+                thaoTacQuanTrong36 = col.operator("vt.object_action", text="TẠO BOUNDING BOX", icon='BACK')
+                thaoTacQuanTrong37 = col.operator("vt.object_action", text="TẠO VIÊN GẠCH KHỚP BOUNDING BOX", icon='BACK')
 
                 thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
@@ -660,9 +663,12 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
 
                 thaoTacQuanTrong31.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_chunky_stylized_rock.Z'
                 thaoTacQuanTrong32.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_procedural_stone_wall.Z'
+                thaoTacQuanTrong32e.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.build_ultimate_cozy_wall.Z'
                 thaoTacQuanTrong33.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.apply_stone_surface_damage.Z'
                 thaoTacQuanTrong34.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.remove_redundant_edges.Z'
                 thaoTacQuanTrong35.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_procedural_stone_path.Z'
+                thaoTacQuanTrong36.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.create_bounding_box_for_active.Z'
+                thaoTacQuanTrong37.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.replace_bounding_box_with_best_brick.Z'
 
                 thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.build_wall_from_proxy.Z'
 

@@ -1655,7 +1655,7 @@ def build_ultimate_cozy_wall(
         # ==========================================
         # 4. INSTANCE VÀ KHÓA SCALE
         # ==========================================
-        new_brick = bpy.data.objects.new(best_brick['obj'].name + "_clone", best_brick['obj'].data)
+        new_brick = bpy.data.objects.new(best_brick['obj'].name + "_clone", best_brick['obj'].data.copy())
         new_brick.location = center
 
         mat_rot = Matrix.Identity(3)
@@ -2161,3 +2161,151 @@ def generate_grass_overhang_bulge_v3(
         grass_obj.data.shade_smooth()
     elif hasattr(grass_obj.data, "polygons"):
         grass_obj.data.polygons.foreach_set('use_smooth', [True] * len(grass_obj.data.polygons))
+
+def create_bounding_box_for_active():
+    # 1. Lấy vật thể đang được chọn (Khuôn gốc)
+    target_obj = bpy.context.active_object
+
+    if not target_obj or target_obj.type not in {'MESH', 'CURVE', 'SURFACE', 'META', 'FONT'}:
+        print("Vui lòng chọn một vật thể hợp lệ!")
+        return None
+
+    # 2. Đọc 8 điểm giới hạn (Bounding Box) của vật thể trong không gian Local
+    bbox_corners = [Vector(v) for v in target_obj.bound_box]
+
+    # Tìm Min, Max để tính toán Chiều dài, Rộng, Cao và Tâm thực tế
+    min_x = min([v.x for v in bbox_corners])
+    max_x = max([v.x for v in bbox_corners])
+    min_y = min([v.y for v in bbox_corners])
+    max_y = max([v.y for v in bbox_corners])
+    min_z = min([v.z for v in bbox_corners])
+    max_z = max([v.z for v in bbox_corners])
+
+    size_x = max_x - min_x
+    size_y = max_y - min_y
+    size_z = max_z - min_z
+
+    # Đây là Tâm thực tế của khung bao (Khắc phục lỗi Origin bị lệch)
+    center_x = (max_x + min_x) / 2.0
+    center_y = (max_y + min_y) / 2.0
+    center_z = (max_z + min_z) / 2.0
+
+    # 3. Khởi tạo Mesh và Object mới cho Bounding Box
+    mesh = bpy.data.meshes.new(name=target_obj.name + "_BBox")
+    bbox_obj = bpy.data.objects.new(name=target_obj.name + "_BBox", object_data=mesh)
+    bpy.context.collection.objects.link(bbox_obj)
+
+    # Đưa Bounding Box về trùng khớp 100% Vị trí, Góc xoay và Scale với vật thể gốc
+    bbox_obj.matrix_world = target_obj.matrix_world.copy()
+
+    # 4. Vẽ khối hộp bằng BMesh
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0) # Tạo khối vuông mặc định 1x1x1
+
+    for v in bm.verts:
+        # Scale khối vuông theo kích thước và dịch chuyển về đúng tâm Local
+        v.co.x = (v.co.x * size_x) + center_x
+        v.co.y = (v.co.y * size_y) + center_y
+        v.co.z = (v.co.z * size_z) + center_z
+
+    bm.to_mesh(mesh)
+    bm.free()
+
+    # 5. Tối ưu hiển thị (Biến nó thành dạng khung dây để không che mất vật thể)
+    bbox_obj.display_type = 'WIRE'
+
+    # Đổi lựa chọn sang Bounding Box vừa tạo để bạn dễ thao tác tiếp
+    bpy.ops.object.select_all(action='DESELECT')
+    bbox_obj.select_set(True)
+    bpy.context.view_layer.objects.active = bbox_obj
+
+    print(f"Đã tạo Bounding Box hoàn hảo cho: {target_obj.name}")
+    return bbox_obj
+
+import bpy
+
+def replace_bounding_box_with_best_brick(brick_collection_name="Cute_Bricks"):
+    # 1. KIỂM TRA ĐẦU VÀO
+    bbox_obj = bpy.context.active_object
+    if not bbox_obj:
+        print("Vui lòng chọn một Bounding Box!")
+        return
+
+    brick_col = bpy.data.collections.get(brick_collection_name)
+    if not brick_col or len(brick_col.objects) == 0:
+        print(f"Không tìm thấy Collection '{brick_collection_name}' hoặc kho gạch đang trống!")
+        return
+
+    # Kích thước của Bounding Box (Khuôn mục tiêu)
+    target_dim = bbox_obj.dimensions
+    if target_dim.z == 0 or target_dim.x == 0 or target_dim.y == 0:
+        print("Bounding Box bị dẹp lép (kích thước = 0), không thể tính toán!")
+        return
+
+    # Tỷ lệ của Bounding Box (Ví dụ: Dài / Cao và Rộng / Cao)
+    target_aspect_xz = target_dim.x / target_dim.z
+    target_aspect_yz = target_dim.y / target_dim.z
+
+    # ==========================================
+    # 2. TÌM VIÊN GẠCH CÓ TỶ LỆ GIỐNG NHẤT
+    # ==========================================
+    best_brick = None
+    min_difference = float('inf')
+
+    for obj in brick_col.objects:
+        if obj.type != 'MESH':
+            continue
+
+        dim = obj.dimensions
+        if dim.z == 0 or dim.x == 0 or dim.y == 0:
+            continue
+
+        # Tính tỷ lệ của viên gạch trong kho
+        brick_aspect_xz = dim.x / dim.z
+        brick_aspect_yz = dim.y / dim.z
+
+        # Chấm điểm độ lệch (Càng nhỏ càng giống nhau về mặt tỷ lệ hình dáng)
+        diff = abs(target_aspect_xz - brick_aspect_xz) + abs(target_aspect_yz - brick_aspect_yz)
+
+        if diff < min_difference:
+            min_difference = diff
+            best_brick = obj
+
+    if not best_brick:
+        print("Không tìm thấy viên gạch nào phù hợp!")
+        return
+
+    # ==========================================
+    # 3. SPAWN GẠCH VÀ ÉP KHUÔN
+    # ==========================================
+    # Tạo bản sao từ viên gạch tốt nhất tìm được
+    new_brick = bpy.data.objects.new(best_brick.name + "_Placed", best_brick.data)
+    bpy.context.collection.objects.link(new_brick)
+
+    # Khớp Vị trí và Góc xoay 100% với Bounding Box
+    new_brick.location = bbox_obj.location
+    new_brick.rotation_euler = bbox_obj.rotation_euler
+
+    # SCALE ĐỂ VỪA KHÍT 100%
+    # Vì chúng ta đã chọn viên có tỷ lệ giống nhất, việc scale này sẽ rất "mượt", không làm méo gạch
+    scale_x = target_dim.x / best_brick.dimensions.x
+    scale_y = target_dim.y / best_brick.dimensions.y
+    scale_z = target_dim.z / best_brick.dimensions.z
+
+    new_brick.scale = (scale_x, scale_y, scale_z)
+
+    # ==========================================
+    # 4. DỌN DẸP
+    # ==========================================
+    # Ẩn cái Bounding Box đi (Không xóa để bạn có thể Undo/sửa lại nếu cần)
+    # bbox_obj.hide_viewport = True
+    # bbox_obj.hide_render = True
+
+    # Chuyển vùng chọn sang viên gạch mới
+    bpy.ops.object.select_all(action='DESELECT')
+    new_brick.select_set(True)
+    bpy.context.view_layer.objects.active = new_brick
+
+    print(f"Thành công! Đã thay Bounding Box bằng viên gạch: {best_brick.name}")
+
+# Cách chạy Tool
