@@ -670,7 +670,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong36.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.create_bounding_box_for_active.Z'
                 thaoTacQuanTrong37.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.replace_bounding_box_with_best_brick.Z'
 
-                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.build_wall_from_proxy.Z'
+                thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_custom_bmesh_bevel.Z'
 
 
                 col.scale_y = 1.5

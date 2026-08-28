@@ -1755,6 +1755,10 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         logic_high_upgrade.remove_redundant_edges(self, context)
         return
 
+    elif alignMethod == 'generate_custom_bmesh_bevel':
+        logic_high_upgrade.generate_custom_bmesh_bevel(self, context, context.active_object)
+        return
+
 
     return
 

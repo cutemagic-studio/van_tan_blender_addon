@@ -2475,3 +2475,91 @@ def replace_bounding_box_with_best_brick(brick_collection_name="Cute_Bricks"):
     print(f"Thành công! Đã thay Bounding Box bằng viên gạch: {best_brick.name}")
 
 # Cách chạy Tool
+
+
+
+
+def generate_custom_bmesh_bevel(
+        self,
+        context,
+        target_obj,
+        bevel_width=0.05,
+        bevel_segments=3,
+        profile=0.5
+):
+    self.report({'INFO'}, "Đang xử lý Bevel (BMesh)...")
+
+    if not target_obj or target_obj.type != 'MESH':
+        self.report({'WARNING'}, "Cần chọn một khối (Mesh) để Bevel.")
+        return
+
+    bm = bmesh.new()
+
+    if target_obj.mode == 'EDIT':
+        bm = bmesh.from_edit_mesh(target_obj.data)
+    else:
+        bm.from_mesh(target_obj.data)
+
+    bm.edges.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+
+    # ==============================================================
+    # TÍNH NĂNG THÔNG MINH: TỰ ĐỘNG NHẬN DIỆN CHẾ ĐỘ CHỌN
+    # ==============================================================
+    select_mode = context.tool_settings.mesh_select_mode
+
+    selected_geom = []
+    affect_type = 'EDGES' # Mặc định là bo cạnh
+
+    # Kiểm tra xem người dùng đang ở chế độ nào
+    if select_mode[0]:
+        # Nếu đang ở chế độ chọn Điểm (Phím số 1)
+        selected_geom = [v for v in bm.verts if v.select]
+        affect_type = 'VERTICES' # Ép lõi chạy Bevel Điểm
+
+    elif select_mode[1] or select_mode[2]:
+        # Nếu đang ở chế độ chọn Cạnh (2) hoặc Mặt (3)
+        selected_geom = [e for e in bm.edges if e.select]
+        affect_type = 'EDGES' # Ép lõi chạy Bevel Cạnh
+
+    # Nếu không quét được gì thì báo lỗi
+    if not selected_geom:
+        self.report({'ERROR'}, "Không tìm thấy điểm hoặc cạnh nào đang được chọn.")
+        if target_obj.mode != 'EDIT':
+            bm.free()
+        return
+
+    # ==============================================================
+    # THUẬT TOÁN LÕI (Truyền tham số tự động vào)
+    # ==============================================================
+    try:
+        bmesh.ops.bevel(
+            bm,
+            geom=selected_geom,        # Tự động là list Đỉnh hoặc Cạnh
+            offset=bevel_width,
+            offset_type='OFFSET',
+            segments=bevel_segments,
+            profile=profile,
+            affect=affect_type         # Tự động biến thành 'VERTICES' hoặc 'EDGES'
+        )
+    except Exception as e:
+        self.report({'ERROR'}, f"Lỗi thuật toán Bevel: {str(e)}")
+        if target_obj.mode != 'EDIT':
+            bm.free()
+        return
+
+    # DỌN DẸP VÀ XUẤT LƯỚI
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0001)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+
+    if target_obj.mode == 'EDIT':
+        bmesh.update_edit_mesh(target_obj.data)
+    else:
+        bm.to_mesh(target_obj.data)
+        bm.free()
+
+    target_obj.data.update()
+
+    # Báo cáo kết quả ra màn hình cho xịn
+    geom_name = "Điểm" if affect_type == 'VERTICES' else "Cạnh"
+    self.report({'INFO'}, f"Đã Bevel {len(selected_geom)} {geom_name}.")
