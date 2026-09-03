@@ -2859,12 +2859,16 @@ def fill_container_with_physics(context, item_count=25, drop_frames=80, scale_mi
         print("LỖI: Hãy chọn các trái cây mẫu, sau đó Shift + Click chọn thùng chứa làm active.")
         return
 
+    # 1. TẠO HOẶC LẤY COLLECTION (Đã vá lỗi "not in View Layer")
     new_col = bpy.data.collections.get("Filled_Fruits")
     if not new_col:
         new_col = bpy.data.collections.new("Filled_Fruits")
+
+    # Đảm bảo Collection này thực sự đang hiển thị trên Scene
+    if new_col.name not in context.scene.collection.children:
         context.scene.collection.children.link(new_col)
 
-    # 1. Xác định không gian của thùng
+    # 2. XÁC ĐỊNH KHÔNG GIAN CỦA THÙNG
     bbox = [container.matrix_world @ Vector(v) for v in container.bound_box]
     min_x = min(v.x for v in bbox)
     max_x = max(v.x for v in bbox)
@@ -2876,11 +2880,11 @@ def fill_container_with_physics(context, item_count=25, drop_frames=80, scale_mi
     if not context.scene.rigidbody_world:
         bpy.ops.rigidbody.world_add()
 
-    # 2. Cấu hình thùng chứa
+    # 3. CẤU HÌNH THÙNG CHỨA
     bpy.ops.object.select_all(action='DESELECT')
     container.select_set(True)
     context.view_layer.objects.active = container
-    
+
     if not container.rigid_body:
         bpy.ops.rigidbody.object_add(type='PASSIVE')
     container.rigid_body.type = 'PASSIVE'
@@ -2888,16 +2892,16 @@ def fill_container_with_physics(context, item_count=25, drop_frames=80, scale_mi
     container.rigid_body.friction = 0.8
     container.rigid_body.collision_margin = 0.01 # Thêm margin nhỏ để chống lọt mesh
 
-    # 3. TẠO MẶT PHẲNG CHẶN ĐÁY (Tạm thời)
+    # 4. TẠO MẶT PHẲNG CHẶN ĐÁY (Tạm thời)
     bpy.ops.mesh.primitive_plane_add(size=50, location=(container.location.x, container.location.y, min_z))
     temp_floor = context.active_object
     bpy.ops.rigidbody.object_add(type='PASSIVE')
     temp_floor.rigid_body.collision_shape = 'BOX' # Dùng BOX cho mặt phẳng để block tốt nhất
     temp_floor.hide_viewport = True
 
-    # 4. Sinh và cấu hình trái cây
+    # 5. SINH VÀ CẤU HÌNH TRÁI CÂY
     spawned_fruits = []
-    spawn_base_z = max_z + 0.3 
+    spawn_base_z = max_z + 0.3
 
     for i in range(item_count):
         source = random.choice(source_fruits)
@@ -2906,10 +2910,10 @@ def fill_container_with_physics(context, item_count=25, drop_frames=80, scale_mi
 
         rx = random.uniform(min_x, max_x)
         ry = random.uniform(min_y, max_y)
-        rz = spawn_base_z + (i * 0.4) 
-        
+        rz = spawn_base_z + (i * 0.4)
+
         instance.location = Vector((rx, ry, rz))
-        
+
         # Áp dụng Random Rotation
         if random_rot:
             instance.rotation_euler = Euler((
@@ -2919,7 +2923,7 @@ def fill_container_with_physics(context, item_count=25, drop_frames=80, scale_mi
             ))
         else:
             instance.rotation_euler = source.rotation_euler
-            
+
         # Áp dụng Random Scale
         rand_scale = random.uniform(scale_min, scale_max)
         instance.scale = source.scale * rand_scale
@@ -2927,46 +2931,52 @@ def fill_container_with_physics(context, item_count=25, drop_frames=80, scale_mi
         bpy.ops.object.select_all(action='DESELECT')
         instance.select_set(True)
         context.view_layer.objects.active = instance
-        
+
         bpy.ops.rigidbody.object_add(type='ACTIVE')
         instance.rigid_body.collision_shape = 'CONVEX_HULL'
         instance.rigid_body.friction = 0.7
         instance.rigid_body.restitution = 0.1
         instance.rigid_body.collision_margin = 0.005 # Căn chỉnh margin
-        
+
         spawned_fruits.append(instance)
 
-    # 5. Chạy Timeline mô phỏng
+    # 6. CHẠY TIMELINE MÔ PHỎNG
     scene = context.scene
     scene.frame_set(1)
     for f in range(1, drop_frames + 1):
         scene.frame_set(f)
         context.view_layer.update()
 
-    # 6. Apply vị trí và dọn dẹp vật lý
+    # 7. APPLY VỊ TRÍ VÀ DỌN DẸP VẬT LÝ (Đã tối ưu hóa siêu tốc)
     bpy.ops.object.select_all(action='DESELECT')
     for f_obj in spawned_fruits:
         f_obj.select_set(True)
-    
+
+    # Apply toàn bộ vị trí cùng lúc
     bpy.ops.object.visual_transform_apply()
+
+    # Gỡ bỏ Rigid Body cho toàn bộ object đang chọn CÙNG MỘT LÚC
+    if spawned_fruits:
+        context.view_layer.objects.active = spawned_fruits[0]
+        bpy.ops.rigidbody.objects_remove()
 
     valid_fruits = []
     for f_obj in spawned_fruits:
-        context.view_layer.objects.active = f_obj
-        bpy.ops.rigidbody.object_remove()
-        
         # QUÉT TRỤC Z: Tiêu hủy các object lọt lưới rớt dưới đáy thùng
         if f_obj.location.z < min_z - 0.05:
             bpy.data.objects.remove(f_obj, do_unlink=True)
         else:
             valid_fruits.append(f_obj)
 
-    # Xóa mặt phẳng chặn đáy và dọn dẹp thùng
+    # 8. XÓA MẶT PHẲNG CHẶN ĐÁY VÀ DỌN DẸP THÙNG
     bpy.data.objects.remove(temp_floor, do_unlink=True)
 
+    bpy.ops.object.select_all(action='DESELECT')
     context.view_layer.objects.active = container
     container.select_set(True)
-    bpy.ops.rigidbody.object_remove()
+    if container.rigid_body:
+        bpy.ops.rigidbody.object_remove()
+
     scene.frame_set(1)
 
     print(f"Thành công! Đã giữ lại {len(valid_fruits)}/{item_count} trái cây an toàn trong thùng.")
