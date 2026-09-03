@@ -2475,3 +2475,498 @@ def replace_bounding_box_with_best_brick(brick_collection_name="Cute_Bricks"):
     print(f"Thành công! Đã thay Bounding Box bằng viên gạch: {best_brick.name}")
 
 # Cách chạy Tool
+
+def drop_and_stack_objects(
+        self, 
+        context, 
+        grid_resolution=5, 
+        margin=0.002
+):
+    """
+    Hàm xử lý thả rơi các đối tượng Mesh đang chọn và xếp chồng chúng lên nhau
+    dựa trên tính toán Raycast từ thấp đến cao.
+    """
+    scene = context.scene
+    depsgraph = context.evaluated_depsgraph_get()
+
+    # 1. LỌC DANH SÁCH OBJECTS ĐƯỢC CHỌN (Chỉ lấy Mesh)
+    selected_objs = [obj for obj in context.selected_objects if obj.type == 'MESH']
+    
+    if not selected_objs:
+        self.report({'WARNING'}, "Cần chọn ít nhất 1 Mesh Object để thả rơi.")
+        return
+
+    # Hàm phụ trợ bên trong để tính tọa độ đáy thấp nhất (World Z)
+    def get_bottom_z(obj):
+        bbox_corners = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+        return min([v.z for v in bbox_corners])
+
+    # 2. SẮP XẾP TỪ THẤP ĐẾN CAO
+    selected_objs.sort(key=get_bottom_z)
+
+    self.report({'INFO'}, f"Bắt đầu thả rơi {len(selected_objs)} objects...")
+
+    # 3. THỰC HIỆN RƠI TỪNG OBJECT
+    for obj in selected_objs:
+        # Tính toán Bounding Box để lấy giới hạn X, Y và Z thấp nhất
+        bbox_world = [obj.matrix_world @ Vector(corner) for corner in obj.bound_box]
+        
+        min_x = min([v.x for v in bbox_world])
+        max_x = max([v.x for v in bbox_world])
+        min_y = min([v.y for v in bbox_world])
+        max_y = max([v.y for v in bbox_world])
+        bottom_z = min([v.z for v in bbox_world])
+
+        # Tạo lưới các điểm (grid) ở mặt đáy để bắn tia
+        ray_origins = []
+        steps = max(1, grid_resolution - 1)
+        for i in range(grid_resolution):
+            for j in range(grid_resolution):
+                x = min_x + (max_x - min_x) * (i / steps if steps > 0 else 0.5)
+                y = min_y + (max_y - min_y) * (j / steps if steps > 0 else 0.5)
+                # Nâng tia lên 0.01m so với đáy để tránh tia bị kẹt ngay tại mặt phẳng xuất phát
+                ray_origins.append(Vector((x, y, bottom_z + 0.01)))
+
+        min_drop_distance = float('inf')
+        direction = Vector((0.0, 0.0, -1.0)) # Bắn thẳng xuống trục -Z
+
+        # 4. TRÁNH TỰ VA CHẠM (Tạm ẩn object hiện tại)
+        original_hide = obj.hide_viewport
+        obj.hide_viewport = True
+        depsgraph.update() # Bắt buộc cập nhật để hệ thống nhận diện vật thể đã tàng hình
+
+        # 5. BẮN TIA RAYCAST
+        for origin in ray_origins:
+            result, location, normal, index, hit_obj, matrix = scene.ray_cast(depsgraph, origin, direction)
+            
+            if result:
+                # Khoảng cách = (Z bắt đầu bắn - Z va chạm) 
+                # - 0.01 (bù khoảng nâng tia lên lúc nãy) 
+                # - margin (khoảng hở an toàn chống Z-fighting)
+                distance = (origin.z - location.z) - 0.01 - margin
+                
+                # Chỉ lấy khoảng cách va chạm ngắn nhất (> 0 để tránh bắt lỗi ngược lên trên)
+                if 0 < distance < min_drop_distance:
+                    min_drop_distance = distance
+
+        # Trả lại trạng thái hiển thị ban đầu
+        obj.hide_viewport = original_hide
+        
+        # 6. DỊCH CHUYỂN VÀ LÀM BỆ ĐỠ CHO LƯỢT SAU
+        if min_drop_distance != float('inf'):
+            obj.location.z -= min_drop_distance
+        
+        # Cập nhật khung cảnh để object vừa rơi xuống trở thành "đất" cho object tiếp theo
+        depsgraph.update()
+
+    self.report({'INFO'}, "Hoàn tất xếp chồng!")
+
+
+import numpy as np
+
+def create_oriented_bounding_box(obj):
+    """
+    Tạo Bounding Box xoay (OBB) ôm sát vật thể dựa trên trục hướng thực tế (PCA).
+    """
+    if not obj or obj.type != 'MESH':
+        return None
+    
+    # 1. Lấy tọa độ tất cả các đỉnh trong không gian World
+    matrix_world = obj.matrix_world
+    verts = np.array([matrix_world @ v.co for v in obj.data.vertices])
+    
+    if len(verts) < 3:
+        return None
+    
+    # 2. Tìm tâm (Mean) và đưa tập đỉnh về gốc tọa độ
+    center = np.mean(verts, axis=0)
+    centered_verts = verts - center
+    
+    # 3. Tính Ma trận hiệp phương sai (Covariance Matrix) và Ma trận xoay (Eigenvectors)
+    cov = np.cov(centered_verts, rowvar=False)
+    eigenvalues, eigenvectors = np.linalg.eigh(cov)
+    
+    # Sắp xếp các trục theo thứ tự từ dài nhất đến ngắn nhất (Dài -> Rộng -> Dày)
+    sort_indices = np.argsort(eigenvalues)[::-1]
+    u = eigenvectors[:, sort_indices[0]] # Trục dọc theo chiều dài lá
+    v = eigenvectors[:, sort_indices[1]] # Trục ngang theo chiều rộng lá
+    w = eigenvectors[:, sort_indices[2]] # Trục vuông góc (độ dày)
+    
+    # Đảm bảo hệ tọa độ thuận (Right-handed System)
+    if np.dot(np.cross(u, v), w) < 0:
+        w = -w
+        
+    rot_matrix_3x3 = np.column_stack((u, v, w))
+    
+    # 4. Chiếu các đỉnh lên 3 trục chính để tìm Min / Max kích thước
+    projected = np.dot(centered_verts, rot_matrix_3x3)
+    min_b = np.min(projected, axis=0)
+    max_b = np.max(projected, axis=0)
+    
+    # 5. Dựng 8 góc của Bounding Box trong không gian World
+    local_corners = np.array([
+        [min_b[0], min_b[1], min_b[2]],
+        [max_b[0], min_b[1], min_b[2]],
+        [max_b[0], max_b[1], min_b[2]],
+        [min_b[0], max_b[1], min_b[2]],
+        [min_b[0], min_b[1], max_b[2]],
+        [max_b[0], min_b[1], max_b[2]],
+        [max_b[0], max_b[1], max_b[2]],
+        [min_b[0], max_b[1], max_b[2]],
+    ])
+    
+    world_corners = np.dot(local_corners, rot_matrix_3x3.T) + center
+    
+    # 6. Tạo Mesh và Object Wireframe Bounding Box
+    mesh = bpy.data.meshes.new(f"{obj.name}_OBB_Mesh")
+    obb_obj = bpy.data.objects.new(f"{obj.name}_OBB", mesh)
+    
+    # Danh sách 12 cạnh nối 8 góc tạo thành hình hộp
+    edges = [
+        (0, 1), (1, 2), (2, 3), (3, 0),
+        (4, 5), (5, 6), (6, 7), (7, 4),
+        (0, 4), (1, 5), (2, 6), (3, 7)
+    ]
+    
+    mesh.from_pydata(world_corners.tolist(), edges, [])
+    mesh.update()
+    
+    bpy.context.collection.objects.link(obb_obj)
+    
+    # Hiển thị dạng Wireframe khung dây trong Viewport
+    obb_obj.display_type = 'WIRE'
+    
+    return obb_obj
+
+# # --- VÍ DỤ CÁCH SỬ DỤNG ---
+# active_obj = bpy.context.active_object
+# if active_obj:
+#     obb = create_oriented_bounding_box(active_obj)
+
+import bpy
+import numpy as np
+from mathutils import Vector, Matrix
+
+def get_obb_transform(obj):
+    """
+    Sử dụng PCA để lấy Ma trận không gian (OBB) và Kích thước thực của vật thể.
+    """
+    verts = np.array([obj.matrix_world @ v.co for v in obj.data.vertices])
+    
+    if len(verts) < 3:
+        return Matrix.Identity(4), Vector((1, 1, 1))
+        
+    center = np.mean(verts, axis=0)
+    centered = verts - center
+    
+    cov = np.cov(centered, rowvar=False)
+    evals, evecs = np.linalg.eigh(cov)
+    
+    # Sắp xếp theo chiều: Dài (u), Rộng (v), Dày (w)
+    sort_idx = np.argsort(evals)[::-1]
+    u = evecs[:, sort_idx[0]]
+    v = evecs[:, sort_idx[1]]
+    w = evecs[:, sort_idx[2]]
+    
+    # --- BỘ ỔN ĐỊNH TRỤC (STABILIZER) ---
+    # Ngăn chặn việc PCA lật ngược lá ngẫu nhiên bằng cách so sánh với trục Local của Object
+    local_mat = obj.matrix_world.to_3x3()
+    local_z = (local_mat @ Vector((0, 0, 1))).normalized()
+    local_x = (local_mat @ Vector((1, 0, 0))).normalized()
+    
+    # 1. Chống lật ngược mặt lá (Upside down)
+    if np.dot(w, local_z) < 0:
+        w = -w
+        v = -v # Giữ nguyên quy tắc bàn tay phải (Right-handed)
+        
+    # 2. Chống lật xoay 180 độ dọc theo cuống lá
+    if np.dot(u, local_x) < 0:
+        u = -u
+        v = -v 
+    # ------------------------------------
+    
+    # Tạo Ma trận xoay OBB
+    rot_mat = Matrix.Identity(3)
+    rot_mat[0][0], rot_mat[1][0], rot_mat[2][0] = u
+    rot_mat[0][1], rot_mat[1][1], rot_mat[2][1] = v
+    rot_mat[0][2], rot_mat[1][2], rot_mat[2][2] = w
+    
+    # Đo kích thước thực tế theo OBB
+    projected = np.dot(centered, np.column_stack((u, v, w)))
+    min_b = np.min(projected, axis=0)
+    max_b = np.max(projected, axis=0)
+    dims = Vector(max_b - min_b)
+    
+    # Đóng gói thành Ma trận 4x4 (Chứa Vị trí và Hướng xoay của OBB)
+    obb_matrix = Matrix.Translation(Vector(center)) @ rot_mat.to_4x4()
+    
+    return obb_matrix, dims
+
+def replace_canopy_with_obb(context):
+    new_leaf = context.active_object
+    old_leaves = [obj for obj in context.selected_objects if obj != new_leaf and obj.type == 'MESH']
+    
+    if not new_leaf or not old_leaves:
+        print("LỖI: Hãy chọn các lá cũ, sau đó Shift + Click chọn lá mới làm mẫu.")
+        return
+
+    # 1. Phân tích chiếc lá MẪU (Lấy chuẩn gốc)
+    base_obb_mat, base_dims = get_obb_transform(new_leaf)
+    base_dims.x = max(base_dims.x, 0.0001) # Chống lỗi chia cho 0 nếu lá quá mỏng
+    base_dims.y = max(base_dims.y, 0.0001)
+    base_dims.z = max(base_dims.z, 0.0001)
+    
+    # Tạo Collection chứa lá mới cho gọn
+    new_col = bpy.data.collections.new("New_Canopy_OBB")
+    context.scene.collection.children.link(new_col)
+
+    # 2. Quét và thay thế
+    for old_leaf in old_leaves:
+        # Phân tích chiếc lá CŨ (Lấy mục tiêu)
+        target_obb_mat, target_dims = get_obb_transform(old_leaf)
+        
+        # Tạo bản sao (Instance) từ lá mẫu để tối ưu RAM
+        instance = bpy.data.objects.new(name="Leaf_Instance", object_data=new_leaf.data)
+        new_col.objects.link(instance)
+        
+        # # --- BƯỚC QUAN TRỌNG NHẤT: MATH MAGIC ---
+        # # Tính tỷ lệ Scale cần thiết để lá Mẫu to/nhỏ bằng lá Cũ
+        # scale_vec = Vector((
+        #     target_dims.x / base_dims.x,
+        #     target_dims.y / base_dims.y,
+        #     target_dims.z / base_dims.z
+        # ))
+        # scale_mat = Matrix.Diagonal((scale_vec.x, scale_vec.y, scale_vec.z, 1.0))
+        
+        # --- BƯỚC QUAN TRỌNG NHẤT: MATH MAGIC ---
+        # Lựa chọn 1: Scale đều (Uniform Scale) dựa trên chiều dài (trục X)
+        uniform_scale = target_dims.x / base_dims.x
+        
+        scale_vec = Vector((
+            uniform_scale,
+            uniform_scale,
+            uniform_scale
+        ))
+        
+        scale_mat = Matrix.Diagonal((scale_vec.x, scale_vec.y, scale_vec.z, 1.0))
+
+        # Công thức chuyển đổi không gian:
+        # Instance Mới = Đặt vào OBB Cũ -> Scale lại -> Xóa bỏ OBB Gốc của lá mẫu -> Giữ nguyên form mẫu
+        transform_matrix = target_obb_mat @ scale_mat @ base_obb_mat.inverted()
+        
+        # Gán ma trận cuối cùng
+        instance.matrix_world = transform_matrix @ new_leaf.matrix_world
+        
+        # Ẩn lá cũ đi
+        # old_leaf.hide_viewport = True
+
+    print(f"Thành công! Đã thay thế và căn chỉnh OBB cho {len(old_leaves)} chiếc lá.")
+
+
+from mathutils import Vector, Matrix, Euler
+
+def generate_canopy_leaves_from_sphere(
+        self,
+        context,
+        leaf_count=50,          # Số lượng lá trên tán
+        min_scale=0.8,          # Co giãn lá nhỏ nhất
+        max_scale=1.2,          # Co giãn lá lớn nhất
+        rotation_variance=0.35, # Độ xoay ngẫu nhiên (Radians)
+        shell_thickness=0.15    # Độ dày lớp vỏ tán lá (phần trăm bán kính)
+):
+    """
+    Sinh tán lá ngẫu nhiên dựa trên khối Sphere đại diện thể tích tán lá.
+    """
+    active_obj = context.active_object
+    selected_objs = [obj for obj in context.selected_objects if obj.type == 'MESH']
+    
+    # 1. KIỂM TRA ĐẦU VÀO
+    if len(selected_objs) < 2 or not active_obj:
+        self.report({'WARNING'}, "Cần chọn 1 Sphere làm khuôn và 1 Mẫu Lá (Active Object)!")
+        return
+
+    leaf_template = active_obj
+    sphere_obj = [obj for obj in selected_objs if obj != leaf_template][0]
+
+    # 2. TÍNH TOÁN BÁN KÍNH VÀ TÂM KHỐI SPHERE (WORLD SPACE)
+    sphere_center = sphere_obj.matrix_world.translation
+    bbox_world = [sphere_obj.matrix_world @ Vector(corner) for corner in sphere_obj.bound_box]
+    min_z = min(v.z for v in bbox_world)
+    max_z = max(v.z for v in bbox_world)
+    radius = (max_z - min_z) / 2.0
+
+    # Tạo Collection chứa tán lá riêng biệt
+    col_name = f"Canopy_{sphere_obj.name}"
+    if col_name in bpy.data.collections:
+        canopy_col = bpy.data.collections[col_name]
+    else:
+        canopy_col = bpy.data.collections.new(col_name)
+        context.scene.collection.children.link(canopy_col)
+
+    # 3. PHÂN BỔ ĐIỂM DÙNG THUẬT TOÁN FIBONACCI SPHERE (Rải điểm vừa đều vừa ngẫu nhiên)
+    phi = math.pi * (math.sqrt(5.0) - 1.0) # Góc tỷ lệ vàng
+
+    for i in range(leaf_count):
+        y = 1.0 - (i / float(max(1, leaf_count - 1))) * 2.0  # y từ 1 down -1
+        radius_at_y = math.sqrt(max(0.0, 1.0 - y * y))
+        theta = phi * i
+
+        x = math.cos(theta) * radius_at_y
+        z = math.sin(theta) * radius_at_y
+
+        # Vector hướng từ tâm quả cầu ra ngoài
+        norm_dir = Vector((x, z, y)).normalized()
+
+        # Tạo khoảng chênh lệch độ sâu ngẫu nhiên để tán lá có độ dày tự nhiên
+        r_offset = radius * (1.0 + random.uniform(-shell_thickness, shell_thickness * 0.5))
+        leaf_pos = sphere_center + norm_dir * r_offset
+
+        # 4. TÍNH HƯỚNG XOAY LÁ BÁM THEO BỀ MẶT SPHERE
+        # Đặt mặt lá (trục Z) chĩa ra ngoài, cuống lá (trục Y) xuôi theo tán
+        track_quat = norm_dir.to_track_quat('Z', 'Y')
+        base_rot_mat = track_quat.to_matrix().to_4x4()
+
+        # Thêm biến thiên ngẫu nhiên cho góc xoay (Pitch, Yaw, Roll)
+        rand_pitch = random.uniform(-rotation_variance, rotation_variance)
+        rand_yaw = random.uniform(-rotation_variance * 2, rotation_variance * 2)
+        rand_roll = random.uniform(-rotation_variance, rotation_variance)
+        
+        rand_rot_mat = Euler((rand_pitch, rand_yaw, rand_roll)).to_matrix().to_4x4()
+        final_rot_mat = base_rot_mat @ rand_rot_mat
+
+        # 5. NGẪU NHIÊN KÍCH THƯỚC (SCALE)
+        s = random.uniform(min_scale, max_scale)
+        scale_mat = Matrix.Diagonal((s, s, s, 1.0))
+
+        # 6. TẠO INSTANCE LÁ MỚI
+        new_leaf = bpy.data.objects.new(name=f"Leaf_{i:03d}", object_data=leaf_template.data)
+        canopy_col.objects.link(new_leaf)
+
+        # Gán ma trận tổng hợp (Vị trí + Xoay + Scale)
+        loc_mat = Matrix.Translation(leaf_pos)
+        new_leaf.matrix_world = loc_mat @ final_rot_mat @ scale_mat
+
+    # Tạm ẩn Sphere khuôn đi sau khi hoàn tất
+    sphere_obj.hide_viewport = True
+    self.report({'INFO'}, f"Đã tạo thành công tán lá với {leaf_count} chiếc lá!")
+
+
+def fill_container_with_physics(context, item_count=25, drop_frames=80, scale_min=0.8, scale_max=1.2, random_rot=True):
+    container = context.active_object
+    source_fruits = [obj for obj in context.selected_objects if obj != container and obj.type == 'MESH']
+
+    if not container or not source_fruits:
+        print("LỖI: Hãy chọn các trái cây mẫu, sau đó Shift + Click chọn thùng chứa làm active.")
+        return
+
+    new_col = bpy.data.collections.get("Filled_Fruits")
+    if not new_col:
+        new_col = bpy.data.collections.new("Filled_Fruits")
+        context.scene.collection.children.link(new_col)
+
+    # 1. Xác định không gian của thùng
+    bbox = [container.matrix_world @ Vector(v) for v in container.bound_box]
+    min_x = min(v.x for v in bbox)
+    max_x = max(v.x for v in bbox)
+    min_y = min(v.y for v in bbox)
+    max_y = max(v.y for v in bbox)
+    max_z = max(v.z for v in bbox)
+    min_z = min(v.z for v in bbox) # Lấy cao độ đáy thùng
+
+    if not context.scene.rigidbody_world:
+        bpy.ops.rigidbody.world_add()
+
+    # 2. Cấu hình thùng chứa
+    bpy.ops.object.select_all(action='DESELECT')
+    container.select_set(True)
+    context.view_layer.objects.active = container
+    
+    if not container.rigid_body:
+        bpy.ops.rigidbody.object_add(type='PASSIVE')
+    container.rigid_body.type = 'PASSIVE'
+    container.rigid_body.collision_shape = 'MESH'
+    container.rigid_body.friction = 0.8
+    container.rigid_body.collision_margin = 0.01 # Thêm margin nhỏ để chống lọt mesh
+
+    # 3. TẠO MẶT PHẲNG CHẶN ĐÁY (Tạm thời)
+    bpy.ops.mesh.primitive_plane_add(size=50, location=(container.location.x, container.location.y, min_z))
+    temp_floor = context.active_object
+    bpy.ops.rigidbody.object_add(type='PASSIVE')
+    temp_floor.rigid_body.collision_shape = 'BOX' # Dùng BOX cho mặt phẳng để block tốt nhất
+    temp_floor.hide_viewport = True
+
+    # 4. Sinh và cấu hình trái cây
+    spawned_fruits = []
+    spawn_base_z = max_z + 0.3 
+
+    for i in range(item_count):
+        source = random.choice(source_fruits)
+        instance = bpy.data.objects.new(name=f"Fruit_Physics_{i}", object_data=source.data)
+        new_col.objects.link(instance)
+
+        rx = random.uniform(min_x, max_x)
+        ry = random.uniform(min_y, max_y)
+        rz = spawn_base_z + (i * 0.4) 
+        
+        instance.location = Vector((rx, ry, rz))
+        
+        # Áp dụng Random Rotation
+        if random_rot:
+            instance.rotation_euler = Euler((
+                random.uniform(0, 6.28),
+                random.uniform(0, 6.28),
+                random.uniform(0, 6.28)
+            ))
+        else:
+            instance.rotation_euler = source.rotation_euler
+            
+        # Áp dụng Random Scale
+        rand_scale = random.uniform(scale_min, scale_max)
+        instance.scale = source.scale * rand_scale
+
+        bpy.ops.object.select_all(action='DESELECT')
+        instance.select_set(True)
+        context.view_layer.objects.active = instance
+        
+        bpy.ops.rigidbody.object_add(type='ACTIVE')
+        instance.rigid_body.collision_shape = 'CONVEX_HULL'
+        instance.rigid_body.friction = 0.7
+        instance.rigid_body.restitution = 0.1
+        instance.rigid_body.collision_margin = 0.005 # Căn chỉnh margin
+        
+        spawned_fruits.append(instance)
+
+    # 5. Chạy Timeline mô phỏng
+    scene = context.scene
+    scene.frame_set(1)
+    for f in range(1, drop_frames + 1):
+        scene.frame_set(f)
+        context.view_layer.update()
+
+    # 6. Apply vị trí và dọn dẹp vật lý
+    bpy.ops.object.select_all(action='DESELECT')
+    for f_obj in spawned_fruits:
+        f_obj.select_set(True)
+    
+    bpy.ops.object.visual_transform_apply()
+
+    valid_fruits = []
+    for f_obj in spawned_fruits:
+        context.view_layer.objects.active = f_obj
+        bpy.ops.rigidbody.object_remove()
+        
+        # QUÉT TRỤC Z: Tiêu hủy các object lọt lưới rớt dưới đáy thùng
+        if f_obj.location.z < min_z - 0.05:
+            bpy.data.objects.remove(f_obj, do_unlink=True)
+        else:
+            valid_fruits.append(f_obj)
+
+    # Xóa mặt phẳng chặn đáy và dọn dẹp thùng
+    bpy.data.objects.remove(temp_floor, do_unlink=True)
+
+    context.view_layer.objects.active = container
+    container.select_set(True)
+    bpy.ops.rigidbody.object_remove()
+    scene.frame_set(1)
+
+    print(f"Thành công! Đã giữ lại {len(valid_fruits)}/{item_count} trái cây an toàn trong thùng.")

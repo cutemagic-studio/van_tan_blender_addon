@@ -356,6 +356,31 @@ class CMC_SortingConfig(bpy.types.PropertyGroup):
         unit='LENGTH'
     ) # type: ignore
 
+    #
+    # LÀM RƠI VẬT THỂ VÀO THÙNG CHỨA
+    # fill_container_with_physics
+    fill_container_item_count: bpy.props.IntProperty(
+        name="Số lượng",
+        default=25, min=1, max=300
+    ) # type: ignore
+    fill_container_drop_frames: bpy.props.IntProperty(
+        name="Số Frame rơi",
+        description="Số frame để mô phỏng vật lý",
+        default=80, min=20, max=300
+    ) # type: ignore
+    fill_container_scale_min: bpy.props.FloatProperty(
+        name="Scale Min",
+        default=0.8, min=0.1
+    ) # type: ignore
+    fill_container_scale_max: bpy.props.FloatProperty(
+        name="Scale Max",
+        default=1.2, min=0.1
+    ) # type: ignore
+    fill_container_random_rot: bpy.props.BoolProperty(
+        name="Xoay ngẫu nhiên 360",
+        default=True
+    ) # type: ignore
+
     # --- PHẦN LOGIC LƯỚI (GRID) ---
     # --- PHẦN LOGIC LƯỚI (GRID) ---
     # --- PHẦN LOGIC LƯỚI (GRID) ---

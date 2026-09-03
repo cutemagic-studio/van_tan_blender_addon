@@ -1727,7 +1727,7 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
     elif alignMethod == 'build_ultimate_cozy_wall':
         active_obj = context.active_object
         # logic_high_upgrade.build_wall_ultimate(active_obj, brick_collection_name="Cute_Bricks", overlap_size=0.05)
-        logic_high_upgrade.build_ultimate_cozy_wall(active_obj, brick_collection_name="Cute_Bricks", overlap_size=0.05)
+        logic_high_upgrade.build_ultimate_cozy_wall(active_obj, brick_collection_name="Cute_Bricks", overlap_size=0.01)
         return
 
     elif alignMethod == 'create_bounding_box_for_active':
@@ -1755,6 +1755,37 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         logic_high_upgrade.remove_redundant_edges(self, context)
         return
 
+    
+    elif alignMethod == 'drop_and_stack_objects':
+        logic_high_upgrade.drop_and_stack_objects(self, context, grid_resolution=5, margin=0.002)
+        return
+
+    # create_oriented_bounding_box
+    elif alignMethod == 'create_oriented_bounding_box':
+        active_obj = bpy.context.active_object
+        logic_high_upgrade.create_oriented_bounding_box(active_obj)
+        return
+
+    elif alignMethod == 'replace_canopy_leaves':
+        logic_high_upgrade.replace_canopy_with_obb(context)
+        return
+
+    elif alignMethod == 'generate_canopy_leaves_from_sphere':
+        logic_high_upgrade.generate_canopy_leaves_from_sphere(self, context)
+        return
+
+    # 
+    elif alignMethod == 'fill_container_with_physics':
+
+        logic_high_upgrade.fill_container_with_physics(
+            context,
+            item_count = config.fill_container_item_count, #
+            drop_frames = 80, #
+            scale_min= config.fill_container_scale_min, #
+            scale_max= config.fill_container_scale_max, #
+            random_rot=True
+            )
+        return
 
     return
 

@@ -607,7 +607,14 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong34 = col.operator("vt.object_action", text="DỌN DẸP LƯỚI THỪA", icon='BACK')
                 thaoTacQuanTrong35 = col.operator("vt.object_action", text="TẠO CON ĐƯỜNG LÁT ĐÁ", icon='BACK')
                 thaoTacQuanTrong36 = col.operator("vt.object_action", text="TẠO BOUNDING BOX", icon='BACK')
+                thaoTacQuanTrong36b = col.operator("vt.object_action", text="TẠO BOUNDING BOX XOAY", icon='BACK')
                 thaoTacQuanTrong37 = col.operator("vt.object_action", text="TẠO VIÊN GẠCH KHỚP BOUNDING BOX", icon='BACK')
+
+                thaoTacQuanTrong38 = col.operator("vt.object_action", text="LÀM RƠI CÁC VẬT THỂ", icon='BACK')
+                thaoTacQuanTrong39 = col.operator("vt.object_action", text="THAY THẾ HỆ THỐNG LÁ MỚI", icon='BACK')
+                thaoTacQuanTrong40 = col.operator("vt.object_action", text="TẠO HỆ THỐNG LÁ", icon='BACK')
+                
+                thaoTacQuanTrong41 = col.operator("vt.object_action", text="LÀM RƠI VẬT VÀO THÙNG CHỨA", icon='BACK')
 
                 thaoTacQuanTrong99 = col.operator("vt.object_action", text="Chức Năng Test", icon='BACK')
 
@@ -668,7 +675,15 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong34.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.remove_redundant_edges.Z'
                 thaoTacQuanTrong35.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_procedural_stone_path.Z'
                 thaoTacQuanTrong36.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.create_bounding_box_for_active.Z'
+                thaoTacQuanTrong36b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.create_oriented_bounding_box.Z'
                 thaoTacQuanTrong37.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.replace_bounding_box_with_best_brick.Z'
+                
+                thaoTacQuanTrong38.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.drop_and_stack_objects.Z'
+                thaoTacQuanTrong39.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.replace_canopy_leaves.Z'
+                # 
+                thaoTacQuanTrong40.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_canopy_leaves_from_sphere.Z'
+                thaoTacQuanTrong41.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.fill_container_with_physics.Z'
+
 
                 thaoTacQuanTrong99.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.build_wall_from_proxy.Z'
 
@@ -923,6 +938,25 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
             row_settings = settings_box.row(align=True)
             row_settings.prop(cfg, "stone_path_gap_size", text="Khe Hở (Vữa)")
 
+            #####
+            #####
+            #####
+            settings_box = main_box.box()
+            settings_box.label(text="Config Làm Rơi Vật Thể Vào Thùng Chứa", icon='LINENUMBERS_ON')
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "fill_container_item_count", text="Số lượng")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "fill_container_scale_min", text="Scale Min")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "fill_container_scale_max", text="Scale Max")
+
+            row_settings = settings_box.row(align=True)
+            row_settings.prop(cfg, "fill_container_random_rot", text="Xoay ngẫu nhiên 360")
+
+            
             #####
             #####
             #####
