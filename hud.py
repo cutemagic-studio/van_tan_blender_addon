@@ -608,6 +608,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong35 = col.operator("vt.object_action", text="TẠO CON ĐƯỜNG LÁT ĐÁ", icon='BACK')
                 thaoTacQuanTrong36 = col.operator("vt.object_action", text="TẠO BOUNDING BOX", icon='BACK')
                 thaoTacQuanTrong36b = col.operator("vt.object_action", text="TẠO BOUNDING BOX XOAY", icon='BACK')
+                thaoTacQuanTrong36c = col.operator("vt.object_action", text="TẠO BOUNDING BOX XOAY SOLID", icon='BACK')
                 thaoTacQuanTrong37 = col.operator("vt.object_action", text="TẠO VIÊN GẠCH KHỚP BOUNDING BOX", icon='BACK')
 
                 thaoTacQuanTrong38 = col.operator("vt.object_action", text="LÀM RƠI CÁC VẬT THỂ", icon='BACK')
@@ -676,6 +677,7 @@ class VIEW3D_PT_VT_ObjectTools(bpy.types.Panel):
                 thaoTacQuanTrong35.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.generate_procedural_stone_path.Z'
                 thaoTacQuanTrong36.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.create_bounding_box_for_active.Z'
                 thaoTacQuanTrong36b.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.create_oriented_bounding_box.Z'
+                thaoTacQuanTrong36c.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.create_oriented_bounding_box_solid.Z'
                 thaoTacQuanTrong37.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.replace_bounding_box_with_best_brick.Z'
                 
                 thaoTacQuanTrong38.action = 'FUNCTION.OBJECT.ARRANGE_ONLY.drop_and_stack_objects.Z'

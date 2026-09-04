@@ -2643,6 +2643,95 @@ def create_oriented_bounding_box(obj):
 # if active_obj:
 #     obb = create_oriented_bounding_box(active_obj)
 
+def create_oriented_bounding_box_solid(obj, is_solid=True):
+    """
+    Tạo Bounding Box xoay (OBB) ôm sát vật thể dựa trên trục hướng thực tế (PCA).
+    :param obj: Vật thể cần đo (Mesh)
+    :param is_solid: True = Khối hộp đặc (Faces), False = Khung dây (Edges)
+    """
+    if not obj or obj.type != 'MESH':
+        return None
+
+    # 1. Lấy tọa độ tất cả các đỉnh trong không gian World
+    matrix_world = obj.matrix_world
+    verts = np.array([matrix_world @ v.co for v in obj.data.vertices])
+
+    if len(verts) < 3:
+        return None
+
+    # 2. Tìm tâm (Mean) và đưa tập đỉnh về gốc tọa độ
+    center = np.mean(verts, axis=0)
+    centered_verts = verts - center
+
+    # 3. Tính Ma trận hiệp phương sai (Covariance Matrix) và Ma trận xoay (Eigenvectors)
+    cov = np.cov(centered_verts, rowvar=False)
+    eigenvalues, eigenvectors = np.linalg.eigh(cov)
+
+    # Sắp xếp các trục theo thứ tự từ dài nhất đến ngắn nhất (Dài -> Rộng -> Dày)
+    sort_indices = np.argsort(eigenvalues)[::-1]
+    u = eigenvectors[:, sort_indices[0]] # Trục dọc theo chiều dài
+    v = eigenvectors[:, sort_indices[1]] # Trục ngang theo chiều rộng
+    w = eigenvectors[:, sort_indices[2]] # Trục vuông góc (độ dày)
+
+    # Đảm bảo hệ tọa độ thuận (Right-handed System)
+    if np.dot(np.cross(u, v), w) < 0:
+        w = -w
+
+    rot_matrix_3x3 = np.column_stack((u, v, w))
+
+    # 4. Chiếu các đỉnh lên 3 trục chính để tìm Min / Max kích thước
+    projected = np.dot(centered_verts, rot_matrix_3x3)
+    min_b = np.min(projected, axis=0)
+    max_b = np.max(projected, axis=0)
+
+    # 5. Dựng 8 góc của Bounding Box trong không gian World
+    local_corners = np.array([
+        [min_b[0], min_b[1], min_b[2]], # 0: Đáy - Trái - Trước
+        [max_b[0], min_b[1], min_b[2]], # 1: Đáy - Phải - Trước
+        [max_b[0], max_b[1], min_b[2]], # 2: Đáy - Phải - Sau
+        [min_b[0], max_b[1], min_b[2]], # 3: Đáy - Trái - Sau
+        [min_b[0], min_b[1], max_b[2]], # 4: Nắp - Trái - Trước
+        [max_b[0], min_b[1], max_b[2]], # 5: Nắp - Phải - Trước
+        [max_b[0], max_b[1], max_b[2]], # 6: Nắp - Phải - Sau
+        [min_b[0], max_b[1], max_b[2]], # 7: Nắp - Trái - Sau
+    ])
+
+    world_corners = np.dot(local_corners, rot_matrix_3x3.T) + center
+
+    # 6. Tạo Mesh và Object Bounding Box
+    mesh = bpy.data.meshes.new(f"{obj.name}_OBB_Mesh")
+    obb_obj = bpy.data.objects.new(f"{obj.name}_OBB", mesh)
+
+    # TÙY CHỌN: TẠO KHỐI ĐẶC HOẶC KHUNG DÂY
+    if is_solid:
+        # Khai báo 6 mặt (Faces). Thứ tự đỉnh đã được sắp xếp chuẩn để Normal không bị lộn ngược.
+        faces = [
+            (0, 3, 2, 1), # Mặt đáy (Bottom)
+            (4, 5, 6, 7), # Mặt nắp (Top)
+            (0, 1, 5, 4), # Mặt trước (Front)
+            (1, 2, 6, 5), # Mặt phải (Right)
+            (2, 3, 7, 6), # Mặt sau (Back)
+            (3, 0, 4, 7)  # Mặt trái (Left)
+        ]
+        # Khi truyền Faces, Blender sẽ tự động nội suy ra Edges, nên list Edges để trống []
+        mesh.from_pydata(world_corners.tolist(), [], faces)
+        obb_obj.display_type = 'TEXTURED' # Hiển thị khối đặc có bóng râm
+    else:
+        # Khai báo 12 cạnh (Edges)
+        edges = [
+            (0, 1), (1, 2), (2, 3), (3, 0),
+            (4, 5), (5, 6), (6, 7), (7, 4),
+            (0, 4), (1, 5), (2, 6), (3, 7)
+        ]
+        mesh.from_pydata(world_corners.tolist(), edges, [])
+        obb_obj.display_type = 'WIRE' # Ép hiển thị dạng lưới dây
+
+    mesh.update()
+    bpy.context.collection.objects.link(obb_obj)
+
+    return obb_obj
+
+
 import bpy
 import numpy as np
 from mathutils import Vector, Matrix

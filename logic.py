@@ -1766,6 +1766,11 @@ def arrange_only(self, context, config, direction='Z', alignMethod='CENTER_BETWE
         logic_high_upgrade.create_oriented_bounding_box(active_obj)
         return
 
+    elif alignMethod == 'create_oriented_bounding_box_solid':
+        active_obj = bpy.context.active_object
+        logic_high_upgrade.create_oriented_bounding_box_solid(active_obj)
+        return
+
     elif alignMethod == 'replace_canopy_leaves':
         logic_high_upgrade.replace_canopy_with_obb(context)
         return
